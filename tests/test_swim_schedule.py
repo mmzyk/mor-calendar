@@ -17,6 +17,9 @@ from swim_schedule import (
     format_practice,
     fetch_sheet_as_csv,
     SHEET_URL,
+    _is_week_header,
+    _parse_day_cell,
+    _extract_year,
 )
 
 
@@ -72,101 +75,182 @@ class TestParseDate(unittest.TestCase):
         self.assertIsNone(parse_date("March 25"))
 
 
-class TestParseSchedule(unittest.TestCase):
-    def _make_rows(self, data_rows):
-        """Prepend a standard header row."""
-        header = ["Date", "Day", "Group", "Practice Time", "Location", "Notes"]
-        return [header] + data_rows
+class TestGridHelpers(unittest.TestCase):
+    """Tests for the internal grid-parsing helpers."""
 
-    def test_basic_parsing(self):
-        rows = self._make_rows([
-            ["3/31/2026", "Tuesday", "All", "6:00–7:30 AM", "Main Pool", ""],
-        ])
+    def test_is_week_header_simple(self):
+        self.assertTrue(_is_week_header(["Jan29-Feb4", "Mon. 1/29"]))
+
+    def test_is_week_header_month_spelled_out(self):
+        self.assertTrue(_is_week_header(["March4-10", "Mon. 3/4"]))
+
+    def test_is_week_header_april(self):
+        self.assertTrue(_is_week_header(["April1-7", "Mon. 4/1"]))
+
+    def test_is_week_header_rejects_group_row(self):
+        self.assertFalse(_is_week_header(["Senior Elite", "5:00-6:30am RAV"]))
+
+    def test_is_week_header_rejects_blank(self):
+        self.assertFalse(_is_week_header(["", "Mon. 1/29"]))
+
+    def test_parse_day_cell_standard(self):
+        self.assertEqual(_parse_day_cell("Mon. 3/31", 2026), date(2026, 3, 31))
+
+    def test_parse_day_cell_tuesday(self):
+        self.assertEqual(_parse_day_cell("Tues. 4/1", 2026), date(2026, 4, 1))
+
+    def test_parse_day_cell_no_match_returns_none(self):
+        self.assertIsNone(_parse_day_cell("", 2026))
+
+    def test_extract_year_from_title_row(self):
+        rows = [["March - April 2026", "", ""], ["", "", ""]]
+        self.assertEqual(_extract_year(rows), 2026)
+
+    def test_extract_year_falls_back_to_current(self):
+        from datetime import date as _date
+        rows = [["No year here"]]
+        self.assertEqual(_extract_year(rows), _date.today().year)
+
+
+class TestParseSchedule(unittest.TestCase):
+    """
+    The sheet uses a weekly grid layout:
+      - Week header row: col0 = date range (e.g. "Mar25-31"),
+                         cols 1-7 = day+date cells (e.g. "Mon. 3/25")
+      - Group rows: col0 = group name, cols 1-7 = practice times for that day
+    """
+
+    def _week_block(self, week_label, days, group_rows):
+        """
+        Build a minimal week block.
+        days: list of up to 7 "Mon. M/D" strings (Mon-Sun)
+        group_rows: list of (group_name, [time_col1, ..., time_col7])
+        """
+        header = [week_label] + days + [""] * (7 - len(days))
+        rows = [header]
+        for group, times in group_rows:
+            rows.append([group] + times + [""] * (7 - len(times)))
+        return rows
+
+    def test_basic_single_event(self):
+        rows = self._week_block(
+            "Mar25-31",
+            ["Mon. 3/25", "Tues. 3/26", "Wed. 3/27", "Thurs. 3/28",
+             "Fri. 3/29", "Sat. 3/30", "Sun. 3/31"],
+            [("Senior 1", ["6:00-7:30am RAV", "", "", "", "", "", ""])],
+        )
         events = parse_schedule(rows)
         self.assertEqual(len(events), 1)
-        self.assertEqual(events[0]["date"], date(2026, 3, 31))
-        self.assertEqual(events[0]["time"], "6:00–7:30 AM")
-        self.assertEqual(events[0]["location"], "Main Pool")
-        self.assertEqual(events[0]["group"], "All")
+        self.assertEqual(events[0]["date"], date(2026, 3, 25))
+        self.assertEqual(events[0]["group"], "Senior 1")
+        self.assertEqual(events[0]["time"], "6:00-7:30am RAV")
+        self.assertEqual(events[0]["day_of_week"], "Wednesday")  # 3/25/2026 is a Wednesday
 
-    def test_multiple_events(self):
-        rows = self._make_rows([
-            ["3/31/2026", "Tuesday",   "Junior", "6:00 AM", "Pool A", ""],
-            ["4/1/2026",  "Wednesday", "Senior", "7:00 AM", "Pool B", ""],
-        ])
+    def test_no_practice_cells_are_skipped(self):
+        rows = self._week_block(
+            "Mar25-31",
+            ["Mon. 3/25", "Tues. 3/26"],
+            [("AG 2", ["No Practice", "5:30-7:00pm RAV"])],
+        )
+        events = parse_schedule(rows)
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["date"], date(2026, 3, 26))
+
+    def test_blank_time_cells_are_skipped(self):
+        rows = self._week_block(
+            "Mar25-31",
+            ["Mon. 3/25", "Tues. 3/26"],
+            [("Senior Elite", ["", "5:00-6:30am RAV"])],
+        )
+        events = parse_schedule(rows)
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["date"], date(2026, 3, 26))
+
+    def test_continuation_rows_with_blank_group_are_skipped(self):
+        # Senior Elite PM session rows have an empty col0 — should be ignored
+        rows = self._week_block(
+            "Mar25-31",
+            ["Mon. 3/25"],
+            [
+                ("Senior Elite", ["5:00-6:30am RAV"]),
+                ("",             ["3:30-5:30pm OPT"]),  # continuation — skip
+            ],
+        )
+        events = parse_schedule(rows)
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["group"], "Senior Elite")
+
+    def test_multiple_groups_same_day(self):
+        rows = self._week_block(
+            "Mar25-31",
+            ["Mon. 3/25"],
+            [
+                ("Senior 1", ["6:00am RAV"]),
+                ("AG 3",     ["4:30pm GWC"]),
+            ],
+        )
         events = parse_schedule(rows)
         self.assertEqual(len(events), 2)
-        self.assertEqual(events[0]["group"], "Junior")
-        self.assertEqual(events[1]["group"], "Senior")
+        groups = {e["group"] for e in events}
+        self.assertIn("Senior 1", groups)
+        self.assertIn("AG 3", groups)
+
+    def test_multiple_weeks(self):
+        week1 = self._week_block(
+            "Mar25-31",
+            ["Mon. 3/25"],
+            [("Senior 1", ["6:00am RAV"])],
+        )
+        week2 = self._week_block(
+            "April1-7",
+            ["Mon. 4/1"],
+            [("Senior 1", ["6:00am RAV"])],
+        )
+        events = parse_schedule(week1 + week2)
+        self.assertEqual(len(events), 2)
+        self.assertEqual(events[0]["date"], date(2026, 3, 25))
+        self.assertEqual(events[1]["date"], date(2026, 4, 1))
 
     def test_blank_rows_are_skipped(self):
-        rows = self._make_rows([
-            ["3/31/2026", "Tuesday",   "All", "6:00 AM", "Pool", ""],
-            ["", "", "", "", "", ""],
-            ["4/1/2026",  "Wednesday", "All", "7:00 AM", "Pool", ""],
-        ])
+        rows = self._week_block(
+            "Mar25-31",
+            ["Mon. 3/25", "Tues. 3/26"],
+            [("Senior 1", ["6:00am RAV", "6:00am RAV"])],
+        )
+        rows.insert(2, ["", "", "", "", "", "", "", ""])  # inject blank row
         events = parse_schedule(rows)
         self.assertEqual(len(events), 2)
 
-    def test_unparseable_date_rows_are_skipped(self):
-        rows = self._make_rows([
-            ["TBD",       "Monday",  "All", "6:00 AM", "Pool", ""],
-            ["3/31/2026", "Tuesday", "All", "6:00 AM", "Pool", ""],
-        ])
-        events = parse_schedule(rows)
+    def test_title_rows_before_first_week_header_are_skipped(self):
+        title_rows = [
+            ["March - April 2026", "", ""],
+            ["Updated 7/30", "", ""],
+            ["North Raleigh", "", ""],
+        ]
+        week = self._week_block(
+            "Mar25-31",
+            ["Mon. 3/25"],
+            [("Senior 1", ["6:00am RAV"])],
+        )
+        events = parse_schedule(title_rows + week)
         self.assertEqual(len(events), 1)
-        self.assertEqual(events[0]["date"], date(2026, 3, 31))
 
-    def test_missing_date_rows_are_skipped(self):
-        rows = self._make_rows([
-            ["", "Monday", "All", "6:00 AM", "Pool", ""],
-        ])
-        events = parse_schedule(rows)
-        self.assertEqual(len(events), 0)
-
-    def test_day_of_week_falls_back_to_computed(self):
-        rows = self._make_rows([
-            ["3/31/2026", "", "All", "6:00 AM", "Pool", ""],
-        ])
-        events = parse_schedule(rows)
-        # 2026-03-31 is a Tuesday
-        self.assertEqual(events[0]["day_of_week"], "Tuesday")
-
-    def test_group_falls_back_to_all_swimmers(self):
-        rows = self._make_rows([
-            ["3/31/2026", "Tuesday", "", "6:00 AM", "Pool", ""],
-        ])
-        events = parse_schedule(rows)
-        self.assertEqual(events[0]["group"], "All Swimmers")
-
-    def test_time_falls_back_to_see_coach(self):
-        rows = self._make_rows([
-            ["3/31/2026", "Tuesday", "All", "", "Pool", ""],
-        ])
-        events = parse_schedule(rows)
-        self.assertEqual(events[0]["time"], "See coach")
-
-    def test_notes_captured(self):
-        rows = self._make_rows([
-            ["3/31/2026", "Tuesday", "All", "6:00 AM", "Pool", "Bring fins"],
-        ])
-        events = parse_schedule(rows)
-        self.assertEqual(events[0]["notes"], "Bring fins")
+    def test_year_extracted_from_title(self):
+        title_rows = [["March - April 2026", ""]]
+        week = self._week_block(
+            "Mar25-31",
+            ["Mon. 3/25"],
+            [("Senior 1", ["6:00am RAV"])],
+        )
+        events = parse_schedule(title_rows + week)
+        self.assertEqual(events[0]["date"].year, 2026)
 
     def test_empty_input(self):
         self.assertEqual(parse_schedule([]), [])
 
-    def test_header_only_returns_empty(self):
-        header = ["Date", "Day", "Group", "Practice Time", "Location", "Notes"]
-        self.assertEqual(parse_schedule([header]), [])
-
-    def test_fuzzy_header_detection(self):
-        # Different capitalisation / wording should still map correctly
-        header = ["EVENT DATE", "Weekday", "Squad", "Start Time", "Venue", "Info"]
-        rows = [header, ["3/31/2026", "Tuesday", "Junior", "6:00 AM", "Pool A", ""]]
-        events = parse_schedule(rows)
-        self.assertEqual(len(events), 1)
-        self.assertEqual(events[0]["date"], date(2026, 3, 31))
+    def test_no_group_rows_returns_empty(self):
+        rows = [["Mar25-31", "Mon. 3/25", "Tues. 3/26"]]
+        self.assertEqual(parse_schedule(rows), [])
 
 
 class TestGetPracticesForDate(unittest.TestCase):

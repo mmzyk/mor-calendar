@@ -50,95 +50,103 @@ def normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text.strip().lower())
 
 
+# ── Grid-format sheet parsing ─────────────────────────────────────────────────
+# The sheet is laid out as a weekly grid, not a flat list:
+#
+#   Row type A — week header:
+#       col0: "Jan29-Feb4"   col1: "Mon. 1/29"   col2: "Tues. 1/30"  ...  col7: "Sun. 2/4"
+#   Row type B — group row:
+#       col0: "Senior Elite" col1: "5:00-6:30am RAV"  col2: ""  ...
+#   Row type C — continuation / blank col0 (extra Senior Elite PM session) — skipped
+#   Row type D — blank row — skipped
+#
+# Columns 1–7 always correspond to Mon–Sun of the current week block.
+
+# Matches week-range labels like "Jan29-Feb4", "March18-24", "Mar25-31", "April1-7"
+_WEEK_RANGE_RE = re.compile(r"^[A-Za-z]+\d+[-–][A-Za-z]*\d+$")
+
+# Extracts the M/D portion from day-header cells like "Mon. 1/29" or "Thurs. 2/1"
+_DAY_CELL_RE = re.compile(r"\b(\d{1,2}/\d{1,2})\b")
+
+
+def _extract_year(rows: list[list[str]]) -> int:
+    """Scan the first few rows for a 4-digit year (e.g. from the title row)."""
+    for row in rows[:4]:
+        for cell in row:
+            m = re.search(r"\b(20\d{2})\b", cell)
+            if m:
+                return int(m.group(1))
+    return date.today().year
+
+
+def _is_week_header(row: list[str]) -> bool:
+    """Return True if col0 looks like a week-range label."""
+    return bool(row) and bool(_WEEK_RANGE_RE.match(row[0].strip()))
+
+
+def _parse_day_cell(cell: str, year: int) -> "date | None":
+    """Parse a day-header cell like 'Mon. 3/25' into a date object."""
+    m = _DAY_CELL_RE.search(cell)
+    if not m:
+        return None
+    return parse_date(f"{m.group(1)}/{year}")
+
+
 def parse_schedule(rows: list[list[str]]) -> list[dict]:
     """
-    Parse raw CSV rows into a list of practice event dicts:
+    Parse the MOR grid-format CSV into a flat list of practice event dicts:
         {date, day_of_week, group, time, location, notes}
 
-    The sheet is expected to have a header row with columns like:
-        Date | Day | Group / Team | Practice Time | Location | Notes
-    We do fuzzy column detection so minor header changes don't break things.
+    The sheet uses a weekly grid layout:
+    - Week header rows (col0 = date range) define the dates for cols 1-7 (Mon-Sun).
+    - Group rows (col0 = group name) carry practice times in cols 1-7.
+    - Cells containing "No Practice" or blank are skipped.
     """
     if not rows:
         return []
 
-    # ── Find the header row ──────────────────────────────────────────────────
-    header_idx = None
-    headers = []
-    date_col = day_col = group_col = time_col = loc_col = notes_col = None
-
-    for i, row in enumerate(rows):
-        norm = [normalize(c) for c in row]
-        # Look for a row that has both a date-like and a time-like header
-        has_date = any("date" in c for c in norm)
-        has_time = any("time" in c for c in norm)
-        if has_date and has_time:
-            header_idx = i
-            headers = norm
-            break
-
-    if header_idx is None:
-        # Fallback: assume first non-empty row is the header
-        for i, row in enumerate(rows):
-            if any(c.strip() for c in row):
-                header_idx = i
-                headers = [normalize(c) for c in row]
-                break
-
-    if header_idx is None:
-        return []
-
-    # ── Map column names to indices ──────────────────────────────────────────
-    for idx, h in enumerate(headers):
-        if "date" in h:
-            date_col = idx
-        elif "day" in h:
-            day_col = idx
-        elif "group" in h or "team" in h or "squad" in h:
-            group_col = idx
-        elif "time" in h:
-            time_col = idx
-        elif "location" in h or "pool" in h or "facility" in h or "venue" in h:
-            loc_col = idx
-        elif "note" in h or "comment" in h or "info" in h:
-            notes_col = idx
-
-    # Guess columns by position if detection failed
-    if date_col is None:
-        date_col = 0
-    if time_col is None:
-        time_col = min(3, len(headers) - 1)
-
-    # ── Parse data rows ──────────────────────────────────────────────────────
+    year = _extract_year(rows)
     events = []
-    for row in rows[header_idx + 1 :]:
+    week_dates: list["date | None"] = []  # dates for cols 1–7 of current week
+
+    for row in rows:
         if not any(c.strip() for c in row):
-            continue  # skip blank rows
+            continue  # blank row
 
-        def get(col):
-            if col is not None and col < len(row):
-                return row[col].strip()
-            return ""
+        col0 = row[0].strip()
 
-        raw_date = get(date_col)
-        if not raw_date:
+        if _is_week_header(row):
+            # Extract Mon–Sun dates from cols 1–7
+            week_dates = [_parse_day_cell(row[col], year) if col < len(row) else None for col in range(1, 8)]
             continue
 
-        parsed_date = parse_date(raw_date)
-        if parsed_date is None:
-            continue
+        if not week_dates:
+            continue  # still in title/metadata rows before first week header
 
-        events.append(
-            {
-                "date": parsed_date,
-                "date_raw": raw_date,
-                "day_of_week": get(day_col) or parsed_date.strftime("%A"),
-                "group": get(group_col) or "All Swimmers",
-                "time": get(time_col) or "See coach",
-                "location": get(loc_col) or "",
-                "notes": get(notes_col) or "",
-            }
-        )
+        if not col0:
+            continue  # continuation row with empty group name — skip
+
+        group = col0
+
+        for slot, practice_date in enumerate(week_dates):
+            col_idx = slot + 1
+            if practice_date is None or col_idx >= len(row):
+                continue
+            time_val = row[col_idx].strip()
+            if not time_val or time_val.lower() == "no practice":
+                continue
+
+            events.append(
+                {
+                    "date": practice_date,
+                    "date_raw": practice_date.strftime("%m/%d/%Y").lstrip("0").replace("/0", "/"),
+                    "day_of_week": practice_date.strftime("%A"),
+                    "group": group,
+                    "time": time_val,
+                    "location": "",
+                    "notes": "",
+                }
+            )
 
     return events
 
