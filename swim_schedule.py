@@ -18,8 +18,11 @@ TEAM_NAME = "MOR North Raleigh Swim Team"
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+CSV_CACHE_PATH = "schedule_cache.csv"
+
+
 def fetch_sheet_as_csv(url: str) -> list[list[str]]:
-    """Download the Google Sheet as CSV and return rows as a list of lists."""
+    """Download the Google Sheet as CSV, save it to disk, and return rows as a list of lists."""
     try:
         req = urllib.request.Request(
             url,
@@ -27,6 +30,9 @@ def fetch_sheet_as_csv(url: str) -> list[list[str]]:
         )
         with urllib.request.urlopen(req, timeout=10) as response:
             raw = response.read().decode("utf-8")
+        with open(CSV_CACHE_PATH, "w", encoding="utf-8") as f:
+            f.write(raw)
+        print(f"  💾  Saved raw CSV to {CSV_CACHE_PATH}")
         reader = csv.reader(io.StringIO(raw))
         rows = [row for row in reader]
         return rows
