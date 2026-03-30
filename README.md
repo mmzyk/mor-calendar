@@ -60,6 +60,30 @@ The app fetches the Google Sheet as a CSV export (`/export?format=csv`), then:
 
 ---
 
+## Running the tests
+
+The test suite uses Python's built-in `unittest` module and requires no extra packages.
+
+```bash
+python3 -m pytest tests/ -v
+```
+
+Or without pytest:
+
+```bash
+python3 -m unittest discover tests
+```
+
+Tests cover date parsing, CSV row parsing, schedule filtering, output formatting, and network error handling (using mocks — no internet connection required).
+
+---
+
+## CSV cache
+
+Each run saves the raw fetched CSV to `schedule_cache.csv` in the working directory for inspection. This file is excluded from version control.
+
+---
+
 ## Configuration
 
 At the top of `swim_schedule.py` you can change:
