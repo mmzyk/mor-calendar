@@ -51,22 +51,32 @@ def normalize(text: str) -> str:
 
 
 # ── Grid-format sheet parsing ─────────────────────────────────────────────────
-# The sheet is laid out as a weekly grid, not a flat list:
+# The sheet is laid out as a weekly grid, not a flat list, and spans multiple
+# years of data appended end-to-end.
 #
-#   Row type A — week header:
-#       col0: "Jan29-Feb4"   col1: "Mon. 1/29"   col2: "Tues. 1/30"  ...  col7: "Sun. 2/4"
+#   Row type A — week header (two known formats):
+#       old: "Jan29-Feb4"    col1: "Mon. 1/29"  col2: "Tues. 1/30"  ...
+#       new: "April 6-12"   col1: "Mon. 4/6"   col2: "Tues. 4/7"   ...
 #   Row type B — group row:
 #       col0: "Senior Elite" col1: "5:00-6:30am RAV"  col2: ""  ...
 #   Row type C — continuation / blank col0 (extra Senior Elite PM session) — skipped
 #   Row type D — blank row — skipped
 #
 # Columns 1–7 always correspond to Mon–Sun of the current week block.
+# The year for each week is resolved per-cell from the day-of-week label.
 
-# Matches week-range labels like "Jan29-Feb4", "March18-24", "Mar25-31", "April1-7"
-_WEEK_RANGE_RE = re.compile(r"^[A-Za-z]+\d+[-–][A-Za-z]*\d+$")
+# Matches week-range labels in both formats:
+#   old (no spaces):  "Jan29-Feb4", "April1-7"
+#   new (with spaces): "April 6-12", "March 30-April5", "Sept 29-Oct 5"
+_WEEK_RANGE_RE = re.compile(r"^[A-Za-z]+\s*\d+[-–][A-Za-z]*\s*\d+$")
 
 # Extracts the M/D portion from day-header cells like "Mon. 1/29" or "Thurs. 2/1"
 _DAY_CELL_RE = re.compile(r"\b(\d{1,2}/\d{1,2})\b")
+
+# Matches the day-of-week abbreviation at the start of a column header cell
+_DAY_ABBR_RE = re.compile(r"^(Mon|Tues|Wed|Thurs|Fri|Sat|Sun)\.?\s+", re.IGNORECASE)
+_WEEKDAY_MAP = {"mon": 0, "tues": 1, "wed": 2, "thurs": 3, "fri": 4, "sat": 5, "sun": 6}
+
 
 def _extract_year(rows: list[list[str]]) -> int:
     """Scan the first few rows for a 4-digit year (e.g. from the title row)."""
@@ -83,12 +93,36 @@ def _is_week_header(row: list[str]) -> bool:
     return bool(row) and bool(_WEEK_RANGE_RE.match(row[0].strip()))
 
 
-def _parse_day_cell(cell: str, year: int) -> "date | None":
-    """Parse a day-header cell like 'Mon. 3/25' into a date object."""
-    m = _DAY_CELL_RE.search(cell)
-    if not m:
+def _parse_day_cell(cell: str, title_year: int) -> "date | None":
+    """
+    Parse a day-header cell like 'Mon. 4/6' into a date object.
+
+    The day-of-week abbreviation (Mon., Tues., etc.) is used to find the
+    correct year: starting from title_year and searching outward, we return
+    the first year where that M/D actually falls on the labeled weekday.
+    This handles sheets that span multiple years — each week block resolves
+    its own year independently.
+    """
+    date_m = _DAY_CELL_RE.search(cell)
+    if not date_m:
         return None
-    return parse_date(f"{m.group(1)}/{year}")
+    month_day = date_m.group(1)
+
+    day_m = _DAY_ABBR_RE.match(cell.strip())
+    if not day_m:
+        # No day label — fall back to title year
+        return parse_date(f"{month_day}/{title_year}")
+
+    expected_weekday = _WEEKDAY_MAP[day_m.group(1).lower()]
+    # Search title_year first, then expand outward so the closest year wins
+    candidates = [title_year]
+    for delta in range(1, 4):
+        candidates += [title_year - delta, title_year + delta]
+    for y in candidates:
+        d = parse_date(f"{month_day}/{y}")
+        if d and d.weekday() == expected_weekday:
+            return d
+    return parse_date(f"{month_day}/{title_year}")
 
 
 def parse_schedule(rows: list[list[str]]) -> list[dict]:
@@ -104,7 +138,7 @@ def parse_schedule(rows: list[list[str]]) -> list[dict]:
     if not rows:
         return []
 
-    year = _extract_year(rows)
+    title_year = _extract_year(rows)
     events = []
     week_dates: list["date | None"] = []  # dates for cols 1–7 of current week
 
@@ -115,8 +149,9 @@ def parse_schedule(rows: list[list[str]]) -> list[dict]:
         col0 = row[0].strip()
 
         if _is_week_header(row):
-            # Extract Mon–Sun dates from cols 1–7
-            week_dates = [_parse_day_cell(row[col], year) if col < len(row) else None for col in range(1, 8)]
+            # Extract Mon–Sun dates from cols 1–7, resolving each cell's year
+            # independently from its day-of-week label.
+            week_dates = [_parse_day_cell(row[col], title_year) if col < len(row) else None for col in range(1, 8)]
             continue
 
         if not week_dates:

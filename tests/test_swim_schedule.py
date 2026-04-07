@@ -78,14 +78,20 @@ class TestParseDate(unittest.TestCase):
 class TestGridHelpers(unittest.TestCase):
     """Tests for the internal grid-parsing helpers."""
 
-    def test_is_week_header_simple(self):
+    def test_is_week_header_old_format(self):
         self.assertTrue(_is_week_header(["Jan29-Feb4", "Mon. 1/29"]))
 
-    def test_is_week_header_month_spelled_out(self):
+    def test_is_week_header_old_format_month_spelled_out(self):
         self.assertTrue(_is_week_header(["March4-10", "Mon. 3/4"]))
 
-    def test_is_week_header_april(self):
-        self.assertTrue(_is_week_header(["April1-7", "Mon. 4/1"]))
+    def test_is_week_header_new_format_with_spaces(self):
+        self.assertTrue(_is_week_header(["April 6-12", "Mon. 4/6"]))
+
+    def test_is_week_header_new_format_cross_month(self):
+        self.assertTrue(_is_week_header(["March 30-April5", "Mon. 3/30"]))
+
+    def test_is_week_header_new_format_fall(self):
+        self.assertTrue(_is_week_header(["Sept 29-Oct 5", "Mon. 9/29"]))
 
     def test_is_week_header_rejects_group_row(self):
         self.assertFalse(_is_week_header(["Senior Elite", "5:00-6:30am RAV"]))
@@ -93,11 +99,17 @@ class TestGridHelpers(unittest.TestCase):
     def test_is_week_header_rejects_blank(self):
         self.assertFalse(_is_week_header(["", "Mon. 1/29"]))
 
-    def test_parse_day_cell_standard(self):
-        self.assertEqual(_parse_day_cell("Mon. 3/31", 2026), date(2026, 3, 31))
+    def test_parse_day_cell_matches_title_year(self):
+        # April 6, 2026 is a Monday — resolves to 2026
+        self.assertEqual(_parse_day_cell("Mon. 4/6", 2026), date(2026, 4, 6))
 
-    def test_parse_day_cell_tuesday(self):
-        self.assertEqual(_parse_day_cell("Tues. 4/1", 2026), date(2026, 4, 1))
+    def test_parse_day_cell_resolves_to_prior_year(self):
+        # March 25 is Monday in 2024, not 2026 — resolves to 2024
+        self.assertEqual(_parse_day_cell("Mon. 3/25", 2026), date(2024, 3, 25))
+
+    def test_parse_day_cell_no_day_label_uses_title_year(self):
+        # No day abbreviation — falls back to title year
+        self.assertEqual(_parse_day_cell("4/6", 2026), date(2026, 4, 6))
 
     def test_parse_day_cell_no_match_returns_none(self):
         self.assertIsNone(_parse_day_cell("", 2026))
@@ -248,6 +260,32 @@ class TestParseSchedule(unittest.TestCase):
         )
         events = parse_schedule(title_rows + week)
         self.assertEqual(events[0]["date"].year, 2026)
+
+    def test_multi_year_sheet_resolves_dates_per_week(self):
+        # Simulates a sheet with both 2024 and 2026 data.
+        # March 25, 2024 = Monday; April 6, 2026 = Monday.
+        title_rows = [["March - April 2026", ""]]
+        week_2024 = self._week_block(
+            "Mar25-31",
+            ["Mon. 3/25"],
+            [("Senior 1", ["5:00pm WV"])],
+        )
+        week_2026 = self._week_block(
+            "April 6-12",
+            ["Mon. 4/6"],
+            [("Senior 1", ["5:00pm WV"])],
+        )
+        events = parse_schedule(title_rows + week_2024 + week_2026)
+        self.assertEqual(len(events), 2)
+        self.assertEqual(events[0]["date"], date(2024, 3, 25))
+        self.assertEqual(events[1]["date"], date(2026, 4, 6))
+
+    def test_week_header_with_spaces_is_recognized(self):
+        rows = [["April 6-12", "Mon. 4/6", "Tues. 4/7"],
+                ["Senior 1",   "7:30pm RAV", ""]]
+        events = parse_schedule(rows)
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["date"], date(2026, 4, 6))
 
     def test_empty_input(self):
         self.assertEqual(parse_schedule([]), [])
