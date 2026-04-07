@@ -68,6 +68,10 @@ _WEEK_RANGE_RE = re.compile(r"^[A-Za-z]+\d+[-–][A-Za-z]*\d+$")
 # Extracts the M/D portion from day-header cells like "Mon. 1/29" or "Thurs. 2/1"
 _DAY_CELL_RE = re.compile(r"\b(\d{1,2}/\d{1,2})\b")
 
+# Matches the day abbreviation prefix in a column header cell
+_DAY_ABBR_RE = re.compile(r"^(Mon|Tues|Wed|Thurs|Fri|Sat|Sun)\.?\s+", re.IGNORECASE)
+_WEEKDAY_MAP = {"mon": 0, "tues": 1, "wed": 2, "thurs": 3, "fri": 4, "sat": 5, "sun": 6}
+
 
 def _extract_year(rows: list[list[str]]) -> int:
     """Scan the first few rows for a 4-digit year (e.g. from the title row)."""
@@ -77,6 +81,38 @@ def _extract_year(rows: list[list[str]]) -> int:
             if m:
                 return int(m.group(1))
     return date.today().year
+
+
+def _resolve_year(rows: list[list[str]]) -> int:
+    """
+    Return the correct schedule year by cross-checking the title year against
+    the day-of-week labels in the first week header row.
+
+    Coaches sometimes copy a prior year's template and update dates without
+    updating the day abbreviations — or vice versa. This detects the mismatch
+    and searches up to ±3 years from the title year for one where the labeled
+    day of week matches the calendar.
+    """
+    title_year = _extract_year(rows)
+    for row in rows:
+        if not _is_week_header(row):
+            continue
+        for col in range(1, 8):
+            if col >= len(row):
+                continue
+            cell = row[col].strip()
+            day_m = _DAY_ABBR_RE.match(cell)
+            date_m = _DAY_CELL_RE.search(cell)
+            if not day_m or not date_m:
+                continue
+            expected_weekday = _WEEKDAY_MAP[day_m.group(1).lower()]
+            month_day = date_m.group(1)
+            for y in range(title_year - 3, title_year + 4):
+                d = parse_date(f"{month_day}/{y}")
+                if d and d.weekday() == expected_weekday:
+                    return y
+        break  # only inspect the first week header
+    return title_year
 
 
 def _is_week_header(row: list[str]) -> bool:
@@ -105,7 +141,7 @@ def parse_schedule(rows: list[list[str]]) -> list[dict]:
     if not rows:
         return []
 
-    year = _extract_year(rows)
+    year = _resolve_year(rows)
     events = []
     week_dates: list["date | None"] = []  # dates for cols 1–7 of current week
 

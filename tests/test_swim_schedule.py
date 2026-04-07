@@ -20,6 +20,7 @@ from swim_schedule import (
     _is_week_header,
     _parse_day_cell,
     _extract_year,
+    _resolve_year,
 )
 
 
@@ -106,6 +107,16 @@ class TestGridHelpers(unittest.TestCase):
         rows = [["March - April 2026", "", ""], ["", "", ""]]
         self.assertEqual(_extract_year(rows), 2026)
 
+    def test_resolve_year_corrects_mismatch(self):
+        # Title says 2026 but "Mon. 4/1" matches 2024
+        rows = [["April 2026"], ["April1-7", "Mon. 4/1", "Tues. 4/2"]]
+        self.assertEqual(_resolve_year(rows), 2024)
+
+    def test_resolve_year_keeps_title_when_labels_agree(self):
+        # April 1, 2026 is Wednesday — label agrees with title
+        rows = [["April 2026"], ["April1-7", "Wed. 4/1", "Thurs. 4/2"]]
+        self.assertEqual(_resolve_year(rows), 2026)
+
     def test_extract_year_falls_back_to_current(self):
         from datetime import date as _date
         rows = [["No year here"]]
@@ -133,10 +144,11 @@ class TestParseSchedule(unittest.TestCase):
         return rows
 
     def test_basic_single_event(self):
+        # March 25, 2026 is a Wednesday
         rows = self._week_block(
             "Mar25-31",
-            ["Mon. 3/25", "Tues. 3/26", "Wed. 3/27", "Thurs. 3/28",
-             "Fri. 3/29", "Sat. 3/30", "Sun. 3/31"],
+            ["Wed. 3/25", "Thurs. 3/26", "Fri. 3/27", "Sat. 3/28",
+             "Sun. 3/29", "Mon. 3/30", "Tues. 3/31"],
             [("Senior 1", ["6:00-7:30am RAV", "", "", "", "", "", ""])],
         )
         events = parse_schedule(rows)
@@ -144,12 +156,12 @@ class TestParseSchedule(unittest.TestCase):
         self.assertEqual(events[0]["date"], date(2026, 3, 25))
         self.assertEqual(events[0]["group"], "Senior 1")
         self.assertEqual(events[0]["time"], "6:00-7:30am RAV")
-        self.assertEqual(events[0]["day_of_week"], "Wednesday")  # 3/25/2026 is a Wednesday
+        self.assertEqual(events[0]["day_of_week"], "Wednesday")
 
     def test_no_practice_cells_are_skipped(self):
         rows = self._week_block(
             "Mar25-31",
-            ["Mon. 3/25", "Tues. 3/26"],
+            ["Wed. 3/25", "Thurs. 3/26"],
             [("AG 2", ["No Practice", "5:30-7:00pm RAV"])],
         )
         events = parse_schedule(rows)
@@ -159,7 +171,7 @@ class TestParseSchedule(unittest.TestCase):
     def test_blank_time_cells_are_skipped(self):
         rows = self._week_block(
             "Mar25-31",
-            ["Mon. 3/25", "Tues. 3/26"],
+            ["Wed. 3/25", "Thurs. 3/26"],
             [("Senior Elite", ["", "5:00-6:30am RAV"])],
         )
         events = parse_schedule(rows)
@@ -196,14 +208,15 @@ class TestParseSchedule(unittest.TestCase):
         self.assertIn("AG 3", groups)
 
     def test_multiple_weeks(self):
+        # Both March 25 and April 1, 2026 are Wednesdays
         week1 = self._week_block(
             "Mar25-31",
-            ["Mon. 3/25"],
+            ["Wed. 3/25"],
             [("Senior 1", ["6:00am RAV"])],
         )
         week2 = self._week_block(
             "April1-7",
-            ["Mon. 4/1"],
+            ["Wed. 4/1"],
             [("Senior 1", ["6:00am RAV"])],
         )
         events = parse_schedule(week1 + week2)
@@ -235,15 +248,31 @@ class TestParseSchedule(unittest.TestCase):
         events = parse_schedule(title_rows + week)
         self.assertEqual(len(events), 1)
 
-    def test_year_extracted_from_title(self):
+    def test_year_from_title_used_when_day_labels_match(self):
+        # March 25, 2026 is a Wednesday — label agrees with title year
         title_rows = [["March - April 2026", ""]]
         week = self._week_block(
             "Mar25-31",
-            ["Mon. 3/25"],
+            ["Wed. 3/25"],
             [("Senior 1", ["6:00am RAV"])],
         )
         events = parse_schedule(title_rows + week)
         self.assertEqual(events[0]["date"].year, 2026)
+
+    def test_year_corrected_when_title_mismatches_day_labels(self):
+        # Title says 2026 but "Mon. 4/1" only fits 2024 (April 1, 2024 is Monday).
+        # The parser should resolve to 2024, making April 4 a Thursday.
+        title_rows = [["March - April 2026", ""]]
+        week = self._week_block(
+            "April1-7",
+            ["Mon. 4/1", "Tues. 4/2", "Wed. 4/3", "Thurs. 4/4",
+             "Fri. 4/5", "Sat. 4/6", "Sun. 4/7"],
+            [("Senior 1", ["", "", "", "6:45-8:30pm WV", "", "", ""])],
+        )
+        events = parse_schedule(title_rows + week)
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["date"], date(2024, 4, 4))
+        self.assertEqual(events[0]["day_of_week"], "Thursday")
 
     def test_empty_input(self):
         self.assertEqual(parse_schedule([]), [])
