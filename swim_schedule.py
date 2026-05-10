@@ -20,6 +20,9 @@ TEAM_NAME = "MOR North Raleigh Swim Team"
 
 CSV_CACHE_PATH = "schedule_cache.csv"
 
+_schedule_cache: list[dict] = []
+_cache_fetched_at: float = 0.0
+
 
 def fetch_sheet_as_csv(url: str) -> list[list[str]]:
     """Download the Google Sheet as CSV, save it to disk, and return rows as a list of lists."""
@@ -37,12 +40,9 @@ def fetch_sheet_as_csv(url: str) -> list[list[str]]:
         rows = [row for row in reader]
         return rows
     except urllib.error.HTTPError as e:
-        print(f"  ✗ HTTP error fetching sheet: {e.code} {e.reason}")
-        sys.exit(1)
+        raise RuntimeError(f"HTTP error fetching sheet: {e.code} {e.reason}")
     except urllib.error.URLError as e:
-        print(f"  ✗ Network error: {e.reason}")
-        print("    Make sure you have an internet connection.")
-        sys.exit(1)
+        raise RuntimeError(f"Network error: {e.reason}. Make sure you have an internet connection.")
 
 
 def normalize(text: str) -> str:
@@ -185,6 +185,18 @@ def parse_schedule(rows: list[list[str]]) -> list[dict]:
     return events
 
 
+def load_schedule(max_age_minutes: int = 30) -> list[dict]:
+    """Return cached events, re-fetching from Google Sheets if stale."""
+    global _schedule_cache, _cache_fetched_at
+    import time
+    if _schedule_cache and (time.time() - _cache_fetched_at) < max_age_minutes * 60:
+        return _schedule_cache
+    rows = fetch_sheet_as_csv(SHEET_URL)
+    _schedule_cache = parse_schedule(rows)
+    _cache_fetched_at = time.time()
+    return _schedule_cache
+
+
 def parse_date(text: str) -> date | None:
     """Try multiple date formats and return a date object or None."""
     text = text.strip()
@@ -321,7 +333,11 @@ def main():
     print_header()
     print(f"\n  Fetching schedule from Google Sheets…")
 
-    rows = fetch_sheet_as_csv(SHEET_URL)
+    try:
+        rows = fetch_sheet_as_csv(SHEET_URL)
+    except RuntimeError as e:
+        print(f"  ✗ {e}")
+        sys.exit(1)
     events = parse_schedule(rows)
 
     if not events:

@@ -373,18 +373,18 @@ class TestFetchSheetAsCsv(unittest.TestCase):
         self.assertEqual(rows[0], ["Date", "Day", "Group", "Practice Time", "Location", "Notes"])
         self.assertEqual(rows[1][0], "3/31/2026")
 
-    def test_http_error_exits(self):
+    def test_http_error_raises(self):
         import urllib.error
         with patch("urllib.request.urlopen", side_effect=urllib.error.HTTPError(
             SHEET_URL, 403, "Forbidden", {}, None
         )):
-            with self.assertRaises(SystemExit):
+            with self.assertRaises(RuntimeError):
                 fetch_sheet_as_csv(SHEET_URL)
 
-    def test_network_error_exits(self):
+    def test_network_error_raises(self):
         import urllib.error
         with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("unreachable")):
-            with self.assertRaises(SystemExit):
+            with self.assertRaises(RuntimeError):
                 fetch_sheet_as_csv(SHEET_URL)
 
 

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ team_name }} - Practice Schedule</title>
+  <style>
+    body { font-family: monospace; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { font-size: 1.2rem; margin-bottom: 0.25rem; }
+    hr { border: none; border-top: 1px solid #ccc; margin: 1rem 0; }
+    .no-practice { color: #888; }
+    .session { margin: 0.5rem 0 0.5rem 1rem; }
+    ul { padding-left: 1.5rem; }
+    li { margin: 0.25rem 0; }
+  </style>
+</head>
+<body>
+  <h1>{{ team_name }}</h1>
+  <p><strong>Practice Schedule Viewer</strong></p>
+  <hr>
+
+  <h2>{{ today.strftime('%A, %B %d, %Y') }} (Today)</h2>
+  {% if today_events %}
+    {% for ev in today_events %}
+      <div class="session">
+        <div>Time: {{ ev.time }}</div>
+        {% if ev.group and ev.group.lower() != 'all swimmers' %}
+        <div>Group: {{ ev.group }}</div>
+        {% endif %}
+        {% if ev.location %}
+        <div>Location: {{ ev.location }}</div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% else %}
+    <p class="no-practice">No practice scheduled for today.</p>
+  {% endif %}
+
+  <hr>
+  <h2>Upcoming (next 7 days)</h2>
+  <ul>
+  {% for day in upcoming %}
+    <li>
+      {{ day.date.strftime('%a %b %d') }}:
+      {% if day.events %}
+        {% for ev in day.events %}{{ ev.time }}{% if ev.group and ev.group.lower() != 'all swimmers' %} [{{ ev.group }}]{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}
+      {% else %}
+        <span class="no-practice">No practice</span>
+      {% endif %}
+    </li>
+  {% endfor %}
+  </ul>
+</body>
+</html>
