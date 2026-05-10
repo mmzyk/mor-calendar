@@ -1,0 +1,1 @@
+It seems to be parsing the correct date now, but it doesn't account for when there are multiple practices in a day for some groups. This is the next bug to solve. 
