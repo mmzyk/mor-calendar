@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-Run the app interactively:
+Run the CLI interactively:
 ```bash
 python swim_schedule.py
 ```
@@ -12,6 +12,12 @@ python swim_schedule.py
 Look up a specific date:
 ```bash
 python swim_schedule.py 3/25/2026
+```
+
+Run the web server (serves today's schedule at http://localhost:8080):
+```bash
+python web_app.py
+python web_app.py --port 9000  # custom port
 ```
 
 Run tests:
@@ -27,18 +33,22 @@ python3 -m pytest tests/test_swim_schedule.py::TestParseSchedule -v
 python3 -m pytest tests/test_swim_schedule.py::TestParseSchedule::test_basic_single_event -v
 ```
 
-No dependencies beyond Python 3.10+ stdlib — no pip installs needed.
+Install dependencies:
+```bash
+pip install -r requirements.txt  # flask
+```
 
 ## Architecture
 
-All logic lives in a single file: `swim_schedule.py`. The app fetches a public Google Sheet as CSV and parses it to display swim practice schedules.
+Core logic lives in `swim_schedule.py`. `web_app.py` is a thin Flask layer that imports from it. The app fetches a public Google Sheet as CSV and parses it to display swim practice schedules.
 
 ### Data flow
 
-1. `fetch_sheet_as_csv()` — downloads the Google Sheet via CSV export URL, saves a local cache to `schedule_cache.csv`, returns raw rows as `list[list[str]]`
-2. `parse_schedule()` — converts the grid-format CSV into flat event dicts with keys: `date`, `date_raw`, `day_of_week`, `group`, `time`, `location`, `notes`
-3. `get_practices_for_date()` — filters events by date
-4. `format_practice()` / `print_day_result()` — display formatting
+1. `fetch_sheet_as_csv()` — downloads the Google Sheet via CSV export URL, always saves the raw CSV to `schedule_cache.csv` on disk, returns raw rows as `list[list[str]]`. Raises `RuntimeError` on network/HTTP failure.
+2. `load_schedule(max_age_minutes=30)` — in-memory cache over `fetch_sheet_as_csv`; used by the web server to avoid fetching on every request.
+3. `parse_schedule()` — converts the grid-format CSV into flat event dicts with keys: `date`, `date_raw`, `day_of_week`, `group`, `time`, `location`, `notes`
+4. `get_practices_for_date()` — filters events by date
+5. `format_practice()` / `print_day_result()` — CLI display formatting; `web_app.py` uses `templates/index.html` instead
 
 ### Sheet format (critical to understand)
 

@@ -8,14 +8,22 @@ exactly when practice is — today, tomorrow, or any date they choose.
 
 ## Requirements
 
-- **Python 3.10+** (uses built-in libraries only — no pip installs needed)
+- **Python 3.10+**
+- **Flask** (`pip install -r requirements.txt`)
 - An internet connection (to fetch the live Google Sheet)
 
 ---
 
 ## Usage
 
-### Interactive mode (recommended)
+### Web server
+```bash
+python web_app.py
+python web_app.py --port 9000  # custom port (default: 8080)
+```
+Opens a page at `http://localhost:8080` showing today's practice schedule and a 7-day summary. The schedule is cached in memory for 30 minutes between Google Sheets fetches.
+
+### Interactive CLI (recommended for date lookups)
 ```bash
 python swim_schedule.py
 ```
@@ -48,12 +56,10 @@ python swim_schedule.py 2026-03-25
 
 ## How it works
 
-The app fetches the Google Sheet as a CSV export (`/export?format=csv`), then:
-- Auto-detects the header row
-- Maps columns (Date, Group, Time, Location, Notes) by name — so minor
-  reformatting by the coaches won't break things
-- Parses dates in a variety of formats
-- Filters and displays sessions for the requested day
+The app fetches the Google Sheet as a CSV export (`/export?format=csv`), then parses its **weekly grid layout**:
+- Each week block has a header row (e.g. `"April 6-12"`) followed by group rows (e.g. `"Senior Elite"`) whose columns 1–7 contain practice times for Mon–Sun
+- Dates are resolved per-cell using the day-of-week label (e.g. `"Mon. 4/6"`), correctly handling sheets that span multiple years
+- Cells containing `"No Practice"` or blank are skipped
 
 > **No API key required.** The sheet is publicly readable, so the app uses
 > the standard Google Sheets CSV export URL.
@@ -62,7 +68,7 @@ The app fetches the Google Sheet as a CSV export (`/export?format=csv`), then:
 
 ## Running the tests
 
-The test suite uses Python's built-in `unittest` module and requires no extra packages.
+The test suite uses Python's built-in `unittest` module. No internet connection required (network calls are mocked).
 
 ```bash
 python3 -m pytest tests/ -v
@@ -80,7 +86,7 @@ Tests cover date parsing, CSV row parsing, schedule filtering, output formatting
 
 ## CSV cache
 
-Each run saves the raw fetched CSV to `schedule_cache.csv` in the working directory for inspection. This file is excluded from version control.
+Every time a fresh fetch occurs (each CLI run, or when the web server's 30-minute in-memory cache expires), the raw CSV is saved to `schedule_cache.csv` in the working directory for inspection. This file is excluded from version control.
 
 ---
 
