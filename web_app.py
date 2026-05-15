@@ -6,7 +6,7 @@ import argparse
 import os
 from datetime import date, timedelta
 from flask import Flask, render_template
-from swim_schedule import load_schedule, get_practices_for_date, TEAM_NAME
+from swim_schedule import load_schedule, get_practices_for_date, TEAM_NAME, SHEET_ID
 
 app = Flask(__name__)
 _SAVE_CSV = os.environ.get("SAVE_CSV", "").lower() in ("1", "true", "yes")
@@ -35,6 +35,8 @@ def index():
         today=today,
         today_events=today_events,
         upcoming=upcoming,
+        sheet_url=f"https://docs.google.com/spreadsheets/d/{SHEET_ID}",
+        cache_ttl_minutes=_CACHE_TTL_MINUTES,
     )
 
 
