@@ -21,7 +21,7 @@ exactly when practice is — today, tomorrow, or any date they choose.
 python web_app.py
 python web_app.py --port 9000  # custom port (default: 8080)
 ```
-Opens a page at `http://localhost:8080` showing today's practice schedule and a 7-day summary. The schedule is cached in memory for 30 minutes between Google Sheets fetches.
+Opens a page at `http://localhost:8080` showing today's practice schedule and a 7-day summary. The schedule is cached in memory between Google Sheets fetches; the TTL defaults to 30 minutes and can be changed with the `CACHE_TTL_MINUTES` environment variable.
 
 ### Interactive CLI (recommended for date lookups)
 ```bash

@@ -10,12 +10,13 @@ from swim_schedule import load_schedule, get_practices_for_date, TEAM_NAME
 
 app = Flask(__name__)
 _SAVE_CSV = os.environ.get("SAVE_CSV", "").lower() in ("1", "true", "yes")
+_CACHE_TTL_MINUTES = int(os.environ.get("CACHE_TTL_MINUTES", 30))
 
 
 @app.route("/")
 def index():
     try:
-        events = load_schedule(save_csv=_SAVE_CSV)
+        events = load_schedule(max_age_minutes=_CACHE_TTL_MINUTES, save_csv=_SAVE_CSV)
     except RuntimeError as e:
         return f"<pre>Error fetching schedule: {e}</pre>", 503
 
