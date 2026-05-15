@@ -108,7 +108,18 @@ Tests cover date parsing, CSV row parsing, schedule filtering, output formatting
 
 ## CSV cache
 
-Every time a fresh fetch occurs (each CLI run, or when the web server's 30-minute in-memory cache expires), the raw CSV is saved to `schedule_cache.csv` in the working directory for inspection. This file is excluded from version control.
+The raw CSV from Google Sheets can optionally be saved to `schedule_cache.csv` for inspection. It is off by default.
+
+```bash
+# CLI
+python swim_schedule.py --save-csv
+python swim_schedule.py 3/25/2026 --save-csv
+
+# Web server
+SAVE_CSV=1 python web_app.py
+```
+
+This file is excluded from version control.
 
 ---
 
