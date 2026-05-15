@@ -23,10 +23,10 @@
   {% if today_events %}
     {% for ev in today_events %}
       <div class="session">
-        <div>Time: {{ ev.time }}</div>
         {% if ev.group and ev.group.lower() != 'all swimmers' %}
         <div>Group: {{ ev.group }}</div>
         {% endif %}
+        <div>Time: {{ ev.time }}</div>
         {% if ev.location %}
         <div>Location: {{ ev.location }}</div>
         {% endif %}

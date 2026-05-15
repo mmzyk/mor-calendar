@@ -229,9 +229,9 @@ def format_practice(event: dict, idx: int = 1, total: int = 1) -> str:
     lines = []
     if total > 1:
         lines.append(f"  Practice #{idx}")
-    lines.append(f"    🕐  Time     : {event['time']}")
     if event["group"] and event["group"].lower() not in ("all swimmers", ""):
         lines.append(f"    👥  Group    : {event['group']}")
+    lines.append(f"    🕐  Time     : {event['time']}")
     if event["location"]:
         lines.append(f"    📍  Location : {event['location']}")
     if event["notes"]:
