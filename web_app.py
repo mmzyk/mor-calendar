@@ -9,12 +9,13 @@ from flask import Flask, render_template
 from swim_schedule import load_schedule, get_practices_for_date, TEAM_NAME
 
 app = Flask(__name__)
+_SAVE_CSV = os.environ.get("SAVE_CSV", "").lower() in ("1", "true", "yes")
 
 
 @app.route("/")
 def index():
     try:
-        events = load_schedule()
+        events = load_schedule(save_csv=_SAVE_CSV)
     except RuntimeError as e:
         return f"<pre>Error fetching schedule: {e}</pre>", 503
 

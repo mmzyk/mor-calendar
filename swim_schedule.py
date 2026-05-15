@@ -24,8 +24,8 @@ _schedule_cache: list[dict] = []
 _cache_fetched_at: float = 0.0
 
 
-def fetch_sheet_as_csv(url: str) -> list[list[str]]:
-    """Download the Google Sheet as CSV, save it to disk, and return rows as a list of lists."""
+def fetch_sheet_as_csv(url: str, save_csv: bool = False) -> list[list[str]]:
+    """Download the Google Sheet as CSV and return rows as a list of lists."""
     try:
         req = urllib.request.Request(
             url,
@@ -33,9 +33,10 @@ def fetch_sheet_as_csv(url: str) -> list[list[str]]:
         )
         with urllib.request.urlopen(req, timeout=10) as response:
             raw = response.read().decode("utf-8")
-        with open(CSV_CACHE_PATH, "w", encoding="utf-8") as f:
-            f.write(raw)
-        print(f"  💾  Saved raw CSV to {CSV_CACHE_PATH}")
+        if save_csv:
+            with open(CSV_CACHE_PATH, "w", encoding="utf-8") as f:
+                f.write(raw)
+            print(f"  💾  Saved raw CSV to {CSV_CACHE_PATH}")
         reader = csv.reader(io.StringIO(raw))
         rows = [row for row in reader]
         return rows
@@ -185,13 +186,13 @@ def parse_schedule(rows: list[list[str]]) -> list[dict]:
     return events
 
 
-def load_schedule(max_age_minutes: int = 30) -> list[dict]:
+def load_schedule(max_age_minutes: int = 30, save_csv: bool = False) -> list[dict]:
     """Return cached events, re-fetching from Google Sheets if stale."""
     global _schedule_cache, _cache_fetched_at
     import time
     if _schedule_cache and (time.time() - _cache_fetched_at) < max_age_minutes * 60:
         return _schedule_cache
-    rows = fetch_sheet_as_csv(SHEET_URL)
+    rows = fetch_sheet_as_csv(SHEET_URL, save_csv=save_csv)
     _schedule_cache = parse_schedule(rows)
     _cache_fetched_at = time.time()
     return _schedule_cache
@@ -330,11 +331,17 @@ def interactive_mode(events: list[dict]):
 
 
 def main():
+    import argparse as _argparse
+    parser = _argparse.ArgumentParser(description="MOR Swim Schedule viewer")
+    parser.add_argument("date", nargs="?", help="Date to look up (e.g. 3/25/2026)")
+    parser.add_argument("--save-csv", action="store_true", help="Save raw CSV to schedule_cache.csv after fetching")
+    args = parser.parse_args()
+
     print_header()
     print(f"\n  Fetching schedule from Google Sheets…")
 
     try:
-        rows = fetch_sheet_as_csv(SHEET_URL)
+        rows = fetch_sheet_as_csv(SHEET_URL, save_csv=args.save_csv)
     except RuntimeError as e:
         print(f"  ✗ {e}")
         sys.exit(1)
@@ -351,12 +358,10 @@ def main():
     print(f"  ✔  Loaded {len(events)} practice session(s)")
     print(f"     covering {min(dates).strftime('%b %d')} – {max(dates).strftime('%b %d, %Y')}\n")
 
-    # If a date was passed as a CLI argument, just print that day and exit
-    if len(sys.argv) > 1:
-        raw_arg = " ".join(sys.argv[1:])
-        target = parse_date(raw_arg)
+    if args.date:
+        target = parse_date(args.date)
         if target is None:
-            print(f"  ⚠  Could not parse date argument: '{raw_arg}'")
+            print(f"  ⚠  Could not parse date argument: '{args.date}'")
             sys.exit(1)
         print_day_result(get_practices_for_date(events, target), target)
     else:
