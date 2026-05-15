@@ -282,12 +282,11 @@ def interactive_mode(events: list[dict]):
         day_events = get_practices_for_date(events, check)
         if day_events:
             found_any = True
-            times = ", ".join(e["time"] for e in day_events)
-            groups = ", ".join(
-                e["group"] for e in day_events if e["group"] not in ("", "All Swimmers")
+            sessions = ", ".join(
+                f"{e['group']}: {e['time']}" if e["group"] not in ("", "All Swimmers") else e["time"]
+                for e in day_events
             )
-            group_str = f" [{groups}]" if groups else ""
-            print(f"  {check.strftime('%a %b %d')}: {times}{group_str}")
+            print(f"  {check.strftime('%a %b %d')}: {sessions}")
     if not found_any:
         print("  No upcoming practices found in the next 7 days.")
     print()

@@ -41,11 +41,11 @@
   <ul>
   {% for day in upcoming %}
     <li>
-      {{ day.date.strftime('%a %b %d') }}:
+      <div>{{ day.date.strftime('%a %b %d') }}</div>
       {% if day.events %}
-        {% for ev in day.events %}{{ ev.time }}{% if ev.group and ev.group.lower() != 'all swimmers' %} [{{ ev.group }}]{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}
+        <div>{% for ev in day.events %}{% if ev.group and ev.group.lower() != 'all swimmers' %}{{ ev.group }}: {% endif %}{{ ev.time }}{% if not loop.last %}, {% endif %}{% endfor %}</div>
       {% else %}
-        <span class="no-practice">No practice</span>
+        <div class="no-practice">No practice</div>
       {% endif %}
     </li>
   {% endfor %}
