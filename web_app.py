@@ -10,7 +10,7 @@ from swim_schedule import load_schedule, get_practices_for_date, TEAM_NAME, SHEE
 
 app = Flask(__name__)
 _SAVE_CSV = os.environ.get("SAVE_CSV", "").lower() in ("1", "true", "yes")
-_CACHE_TTL_MINUTES = int(os.environ.get("CACHE_TTL_MINUTES", 30))
+_CACHE_TTL_MINUTES = int(os.environ.get("CACHE_TTL_MINUTES", 5))
 
 
 @app.route("/")
