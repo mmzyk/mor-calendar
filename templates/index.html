@@ -15,20 +15,20 @@
   </style>
 </head>
 <body>
-  <h1>{{ team_name }}</h1>
+  <h1>🏊 {{ team_name }}</h1>
   <p><strong>Practice Schedule Viewer</strong></p>
   <hr>
 
-  <h2>{{ today.strftime('%A, %B %d, %Y') }} (Today)</h2>
+  <h2>📅 {{ today.strftime('%A, %B %d, %Y') }} (Today)</h2>
   {% if today_events %}
     {% for ev in today_events %}
       <div class="session">
         {% if ev.group and ev.group.lower() != 'all swimmers' %}
-        <div>Group: {{ ev.group }}</div>
+        <div>👥 Group: {{ ev.group }}</div>
         {% endif %}
-        <div>Time: {{ ev.time }}</div>
+        <div>🕐 Time: {{ ev.time }}</div>
         {% if ev.location %}
-        <div>Location: {{ ev.location }}</div>
+        <div>📍 Location: {{ ev.location }}</div>
         {% endif %}
       </div>
     {% endfor %}
@@ -37,7 +37,7 @@
   {% endif %}
 
   <hr>
-  <h2>Upcoming (next 7 days)</h2>
+  <h2>📆 Upcoming (next 7 days)</h2>
   <ul>
   {% for day in upcoming %}
     <li>
@@ -54,6 +54,8 @@
   <p style="color: #888; font-size: 0.85rem;">
     Schedule data from <a href="{{ sheet_url }}">MOR Swim Schedule</a>.
     Cached for up to {{ cache_ttl_minutes }} minutes.
+    Errors possible. This is not an official site of <a href="{{ team_website }}">MOR</a>.
+    Always consult the official communication channels for the most up-to-date information.
   </p>
 </body>
 </html>

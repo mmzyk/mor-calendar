@@ -37,6 +37,7 @@ def index():
         upcoming=upcoming,
         sheet_url=f"https://docs.google.com/spreadsheets/d/{SHEET_ID}",
         cache_ttl_minutes=_CACHE_TTL_MINUTES,
+        team_website=f"https://www.gomotionapp.com/team/ncmrwa/page/home",
     )
 
 
