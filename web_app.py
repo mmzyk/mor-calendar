@@ -3,6 +3,7 @@ Flask web app for the MOR swim schedule.
 Run: python web_app.py [--port PORT]
 """
 import argparse
+import os
 from datetime import date, timedelta
 from flask import Flask, render_template
 from swim_schedule import load_schedule, get_practices_for_date, TEAM_NAME
@@ -37,6 +38,6 @@ def index():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="MOR Swim Schedule web server")
-    parser.add_argument("--port", type=int, default=8080, help="Port to listen on (default: 8080)")
+    parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8080)), help="Port to listen on (default: 8080 or $PORT)")
     args = parser.parse_args()
     app.run(host="0.0.0.0", port=args.port)

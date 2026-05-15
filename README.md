@@ -66,6 +66,28 @@ The app fetches the Google Sheet as a CSV export (`/export?format=csv`), then pa
 
 ---
 
+## Deploying to Railway
+
+[Railway](https://railway.app) is an easy way to host the web app publicly. The repo already includes the required `Procfile` and `runtime.txt`.
+
+### Steps
+
+1. **Sign in** at [railway.app](https://railway.app) with your GitHub account.
+2. Click **New Project** → **Deploy from GitHub repo** and select this repo.
+3. Once deployed, go to **Settings → Networking → Generate Domain** to get a public URL.
+
+Railway injects a `PORT` environment variable automatically; the app reads it at startup, so no configuration is needed.
+
+### Local vs. Railway
+
+| Context | How it starts | Port |
+|---------|--------------|------|
+| Local | `python web_app.py` | 8080 (or `--port N`) |
+| Local with `$PORT` | `PORT=9000 python web_app.py` | 9000 |
+| Railway | `gunicorn web_app:app` (via `Procfile`) | Railway-assigned `$PORT` |
+
+---
+
 ## Running the tests
 
 The test suite uses Python's built-in `unittest` module. No internet connection required (network calls are mocked).
