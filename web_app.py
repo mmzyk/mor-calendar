@@ -12,15 +12,28 @@ app = Flask(__name__)
 _SAVE_CSV = os.environ.get("SAVE_CSV", "").lower() in ("1", "true", "yes")
 _CACHE_TTL_MINUTES = int(os.environ.get("CACHE_TTL_MINUTES", 5))
 
+def _resolve_display_date() -> date:
+    """Return the date to display, from $DISPLAY_DATE if set, else today."""
+    raw = os.environ.get("DISPLAY_DATE", "").strip()
+    if not raw:
+        return date.today()
+    from swim_schedule import parse_date
+    parsed = parse_date(raw)
+    if parsed is None:
+        raise ValueError(f"DISPLAY_DATE={raw!r} could not be parsed; use YYYY-MM-DD or MM/DD/YYYY")
+    return parsed
+
 
 @app.route("/")
 def index():
     try:
         events = load_schedule(max_age_minutes=_CACHE_TTL_MINUTES, save_csv=_SAVE_CSV)
+        today = _resolve_display_date()
     except RuntimeError as e:
         return f"<pre>Error fetching schedule: {e}</pre>", 503
+    except ValueError as e:
+        return f"<pre>Configuration error: {e}</pre>", 500
 
-    today = date.today()
     today_events = get_practices_for_date(events, today)
 
     upcoming = []
@@ -33,6 +46,7 @@ def index():
         "index.html",
         team_name=TEAM_NAME,
         today=today,
+        is_today=(today == date.today()),
         today_events=today_events,
         upcoming=upcoming,
         sheet_url=f"https://docs.google.com/spreadsheets/d/{SHEET_ID}",

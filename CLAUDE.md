@@ -18,6 +18,7 @@ Run the web server (serves today's schedule at http://localhost:8080):
 ```bash
 python web_app.py
 python web_app.py --port 9000  # custom port
+DISPLAY_DATE=2026-06-01 python web_app.py  # pin to a specific date
 ```
 
 Run tests:
@@ -56,7 +57,7 @@ The Google Sheet uses a **weekly grid layout**, not a flat table. The parser han
 
 - **Week header rows** (col0 matches `_WEEK_RANGE_RE`): e.g. `"April 6-12"` or `"Jan29-Feb4"`. Cols 1–7 contain day+date cells like `"Mon. 4/6"`.
 - **Group rows** (col0 = group name like `"Senior Elite"`): cols 1–7 contain practice times for Mon–Sun of the current week block.
-- **Continuation rows** (col0 empty): skipped — these are extra sessions for the same group.
+- **Continuation rows** (col0 empty): treated as a second session for the previous group — both sessions are emitted as separate events.
 - **Blank rows**: skipped.
 
 ### Year resolution
