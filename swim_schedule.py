@@ -143,6 +143,8 @@ def parse_schedule(rows: list[list[str]]) -> list[dict]:
     events = []
     week_dates: list["date | None"] = []  # dates for cols 1–7 of current week
 
+    last_group = ""
+
     for row in rows:
         if not any(c.strip() for c in row):
             continue  # blank row
@@ -159,9 +161,12 @@ def parse_schedule(rows: list[list[str]]) -> list[dict]:
             continue  # still in title/metadata rows before first week header
 
         if not col0:
-            continue  # continuation row with empty group name — skip
-
-        group = col0
+            if not last_group:
+                continue
+            group = last_group
+        else:
+            group = col0
+            last_group = col0
 
         for slot, practice_date in enumerate(week_dates):
             col_idx = slot + 1

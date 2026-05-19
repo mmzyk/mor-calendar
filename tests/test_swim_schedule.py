@@ -179,19 +179,55 @@ class TestParseSchedule(unittest.TestCase):
         self.assertEqual(len(events), 1)
         self.assertEqual(events[0]["date"], date(2026, 3, 26))
 
-    def test_continuation_rows_with_blank_group_are_skipped(self):
-        # Senior Elite PM session rows have an empty col0 — should be ignored
+    def test_double_session_same_group_both_captured(self):
+        # A blank col0 row immediately after a group row is a second session
+        # for that group on the same day.
         rows = self._week_block(
-            "Mar25-31",
-            ["Mon. 3/25"],
+            "April 6-12",
+            ["Mon. 4/6"],
             [
                 ("Senior Elite", ["5:00-6:30am RAV"]),
-                ("",             ["3:30-5:30pm OPT"]),  # continuation — skip
+                ("",             ["3:30-5:30pm OPT"]),
             ],
         )
         events = parse_schedule(rows)
+        self.assertEqual(len(events), 2)
+        self.assertTrue(all(e["group"] == "Senior Elite" for e in events))
+        times = {e["time"] for e in events}
+        self.assertIn("5:00-6:30am RAV", times)
+        self.assertIn("3:30-5:30pm OPT", times)
+
+    def test_double_session_uses_correct_group_not_prior_group(self):
+        # Blank col0 row should inherit the group immediately preceding it,
+        # not an earlier group from the same week block.
+        rows = self._week_block(
+            "April 6-12",
+            ["Mon. 4/6"],
+            [
+                ("AG 3",         ["4:30pm GWC"]),
+                ("Senior Elite", ["5:00-6:30am RAV"]),
+                ("",             ["3:30-5:30pm OPT"]),
+            ],
+        )
+        events = parse_schedule(rows)
+        second_sessions = [e for e in events if e["time"] == "3:30-5:30pm OPT"]
+        self.assertEqual(len(second_sessions), 1)
+        self.assertEqual(second_sessions[0]["group"], "Senior Elite")
+
+    def test_blank_col0_row_before_first_week_header_still_skipped(self):
+        # A blank col0 row in the title section (before any week header) should
+        # produce no events, since last_group is empty at that point.
+        title_rows = [
+            ["March - April 2026", ""],
+            ["", "some metadata"],
+        ]
+        week = self._week_block(
+            "April 6-12",
+            ["Mon. 4/6"],
+            [("Senior 1", ["6:00am RAV"])],
+        )
+        events = parse_schedule(title_rows + week)
         self.assertEqual(len(events), 1)
-        self.assertEqual(events[0]["group"], "Senior Elite")
 
     def test_multiple_groups_same_day(self):
         rows = self._week_block(
