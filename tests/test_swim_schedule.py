@@ -14,7 +14,7 @@ from swim_schedule import (
     parse_date,
     parse_schedule,
     get_practices_for_date,
-    format_practice,
+    group_events_by_group,
     fetch_sheet_as_csv,
     SHEET_URL,
     _is_week_header,
@@ -356,43 +356,50 @@ class TestGetPracticesForDate(unittest.TestCase):
         self.assertEqual(result, [])
 
 
-class TestFormatPractice(unittest.TestCase):
-    def _event(self, **overrides):
-        base = {
-            "time": "6:00–7:30 AM",
-            "group": "All Swimmers",
-            "location": "Main Pool",
-            "notes": "",
-        }
-        base.update(overrides)
-        return base
+class TestGroupEventsByGroup(unittest.TestCase):
+    def _ev(self, group, time):
+        return {"group": group, "time": time, "location": "", "notes": "",
+                "date": date(2026, 4, 6), "date_raw": "4/6/2026", "day_of_week": "Monday"}
 
-    def test_time_always_shown(self):
-        self.assertIn("6:00–7:30 AM", format_practice(self._event()))
+    def test_empty_returns_empty(self):
+        self.assertEqual(group_events_by_group([]), [])
 
-    def test_generic_group_not_shown(self):
-        self.assertNotIn("Group", format_practice(self._event(group="All Swimmers")))
+    def test_single_group_single_session(self):
+        events = [self._ev("Senior Elite", "5:00-6:30am")]
+        result = group_events_by_group(events)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["group"], "Senior Elite")
+        self.assertEqual(len(result[0]["sessions"]), 1)
 
-    def test_named_group_shown(self):
-        self.assertIn("Junior", format_practice(self._event(group="Junior")))
+    def test_single_group_two_sessions_collapsed(self):
+        events = [self._ev("Senior Elite", "5:00-6:30am"),
+                  self._ev("Senior Elite", "3:30-5:30pm")]
+        result = group_events_by_group(events)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["group"], "Senior Elite")
+        self.assertEqual(len(result[0]["sessions"]), 2)
+        times = [s["time"] for s in result[0]["sessions"]]
+        self.assertIn("5:00-6:30am", times)
+        self.assertIn("3:30-5:30pm", times)
 
-    def test_location_shown_when_present(self):
-        self.assertIn("Main Pool", format_practice(self._event(location="Main Pool")))
+    def test_two_groups_returned_separately(self):
+        events = [self._ev("AG 3", "4:30pm"),
+                  self._ev("Senior Elite", "5:00am")]
+        result = group_events_by_group(events)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["group"], "AG 3")
+        self.assertEqual(result[1]["group"], "Senior Elite")
 
-    def test_location_omitted_when_empty(self):
-        self.assertNotIn("Location", format_practice(self._event(location="")))
-
-    def test_notes_shown_when_present(self):
-        self.assertIn("Bring fins", format_practice(self._event(notes="Bring fins")))
-
-    def test_notes_omitted_when_empty(self):
-        self.assertNotIn("Notes", format_practice(self._event(notes="")))
-
-    def test_practice_number_shown_for_multiple(self):
-        self.assertIn("Practice #2", format_practice(self._event(), idx=2, total=3))
-
-    def test_practice_number_omitted_for_single(self):
-        self.assertNotIn("Practice #", format_practice(self._event(), idx=1, total=1))
+    def test_mixed_groups_preserves_order_and_collapses_correctly(self):
+        events = [self._ev("AG 3", "4:30pm"),
+                  self._ev("Senior Elite", "5:00am"),
+                  self._ev("Senior Elite", "3:30pm")]
+        result = group_events_by_group(events)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["group"], "AG 3")
+        self.assertEqual(len(result[0]["sessions"]), 1)
+        self.assertEqual(result[1]["group"], "Senior Elite")
+        self.assertEqual(len(result[1]["sessions"]), 2)
 
 
 class TestFetchSheetAsCsv(unittest.TestCase):

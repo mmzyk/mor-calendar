@@ -77,3 +77,10 @@ TEAM_NAME = "MOR North Raleigh Swim Team"
 ### Tests
 
 Tests use `unittest` (stdlib) with `unittest.mock` for network calls — no internet connection required. The `TestParseSchedule._week_block()` helper builds minimal grid-format CSV fixtures for testing the parser.
+
+## Git Commit Style
+- Use Conventional Commits format: `type(scope): description`
+- Types: feat, fix, docs, chore, refactor, test
+- Keep subject line under 72 characters
+- Use imperative mood: "add feature" not "added feature"
+- Include a body for non-trivial changes explaining *why*, not *what*

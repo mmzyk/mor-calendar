@@ -20,16 +20,18 @@
   <hr>
 
   <h2>📅 {{ today.strftime('%A, %B %d, %Y') }}{% if is_today %} (Today){% endif %}</h2>
-  {% if today_events %}
-    {% for ev in today_events %}
+  {% if today_grouped %}
+    {% for g in today_grouped %}
       <div class="session">
-        {% if ev.group and ev.group.lower() != 'all swimmers' %}
-        <div>👥 Group: {{ ev.group }}</div>
+        {% if g.group and g.group.lower() != 'all swimmers' %}
+        <div>👥 Group: {{ g.group }}</div>
         {% endif %}
+        {% for ev in g.sessions %}
         <div>🕐 Time: {{ ev.time }}</div>
         {% if ev.location %}
         <div>📍 Location: {{ ev.location }}</div>
         {% endif %}
+        {% endfor %}
       </div>
     {% endfor %}
   {% else %}
@@ -42,8 +44,14 @@
   {% for day in upcoming %}
     <li>
       <div>{{ day.date.strftime('%a %b %d') }}</div>
-      {% if day.events %}
-        <div>{% for ev in day.events %}{% if ev.group and ev.group.lower() != 'all swimmers' %}{{ ev.group }}: {% endif %}{{ ev.time }}{% if not loop.last %}, {% endif %}{% endfor %}</div>
+      {% if day.grouped %}
+        <div>
+          {%- for g in day.grouped %}
+            {%- if g.group and g.group.lower() != 'all swimmers' %}{{ g.group }}: {% endif %}
+            {%- for ev in g.sessions %}{{ ev.time }}{% if not loop.last %}, {% endif %}{% endfor %}
+            {%- if not loop.last %}; {% endif %}
+          {%- endfor %}
+        </div>
       {% else %}
         <div class="no-practice">No practice</div>
       {% endif %}

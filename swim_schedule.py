@@ -229,19 +229,22 @@ def get_practices_for_date(events: list[dict], target: date) -> list[dict]:
     return [e for e in events if e["date"] == target]
 
 
-def format_practice(event: dict, idx: int = 1, total: int = 1) -> str:
-    """Pretty-print a single practice event."""
-    lines = []
-    if total > 1:
-        lines.append(f"  Practice #{idx}")
-    if event["group"] and event["group"].lower() not in ("all swimmers", ""):
-        lines.append(f"    👥  Group    : {event['group']}")
-    lines.append(f"    🕐  Time     : {event['time']}")
-    if event["location"]:
-        lines.append(f"    📍  Location : {event['location']}")
-    if event["notes"]:
-        lines.append(f"    📝  Notes    : {event['notes']}")
-    return "\n".join(lines)
+def group_events_by_group(events: list[dict]) -> list[dict]:
+    """Collapse multi-session events so each group appears once with all its sessions."""
+    groups = []
+    seen: dict[str, dict] = {}
+    for ev in events:
+        key = ev["group"]
+        if key not in seen:
+            entry = {"group": key, "sessions": []}
+            seen[key] = entry
+            groups.append(entry)
+        seen[key]["sessions"].append(ev)
+    return groups
+
+
+def _is_named_group(group: str) -> bool:
+    return bool(group) and group.lower() != "all swimmers"
 
 
 def print_header():
@@ -263,11 +266,16 @@ def print_day_result(events: list[dict], target: date, label: str = ""):
         return
 
     print(f"  ✔  {len(events)} practice session(s) found:\n")
-    for i, ev in enumerate(events, 1):
-        print(format_practice(ev, i, len(events)))
-        if i < len(events):
-            print()
-    print()
+    for g in group_events_by_group(events):
+        if _is_named_group(g["group"]):
+            print(f"    👥  Group    : {g['group']}")
+        for ev in g["sessions"]:
+            print(f"    🕐  Time     : {ev['time']}")
+            if ev["location"]:
+                print(f"    📍  Location : {ev['location']}")
+            if ev["notes"]:
+                print(f"    📝  Notes    : {ev['notes']}")
+        print()
 
 
 def interactive_mode(events: list[dict]):
@@ -287,11 +295,14 @@ def interactive_mode(events: list[dict]):
         day_events = get_practices_for_date(events, check)
         if day_events:
             found_any = True
-            sessions = ", ".join(
-                f"{e['group']}: {e['time']}" if e["group"] not in ("", "All Swimmers") else e["time"]
-                for e in day_events
-            )
-            print(f"  {check.strftime('%a %b %d')}: {sessions}")
+            parts = []
+            for g in group_events_by_group(day_events):
+                times = ", ".join(s["time"] for s in g["sessions"])
+                if _is_named_group(g["group"]):
+                    parts.append(f"{g['group']}: {times}")
+                else:
+                    parts.append(times)
+            print(f"  {check.strftime('%a %b %d')}: {'; '.join(parts)}")
     if not found_any:
         print("  No upcoming practices found in the next 7 days.")
     print()

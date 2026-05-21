@@ -6,7 +6,7 @@ import argparse
 import os
 from datetime import date, timedelta
 from flask import Flask, render_template
-from swim_schedule import load_schedule, get_practices_for_date, TEAM_NAME, SHEET_ID
+from swim_schedule import load_schedule, get_practices_for_date, group_events_by_group, TEAM_NAME, SHEET_ID
 
 app = Flask(__name__)
 _SAVE_CSV = os.environ.get("SAVE_CSV", "").lower() in ("1", "true", "yes")
@@ -35,19 +35,23 @@ def index():
         return f"<pre>Configuration error: {e}</pre>", 500
 
     today_events = get_practices_for_date(events, today)
+    today_grouped = group_events_by_group(today_events)
 
     upcoming = []
     for offset in range(1, 8):
         day = today + timedelta(days=offset)
         day_events = get_practices_for_date(events, day)
-        upcoming.append({"date": day, "events": day_events})
+        upcoming.append({
+            "date": day,
+            "grouped": group_events_by_group(day_events),
+        })
 
     return render_template(
         "index.html",
         team_name=TEAM_NAME,
         today=today,
         is_today=(today == date.today()),
-        today_events=today_events,
+        today_grouped=today_grouped,
         upcoming=upcoming,
         sheet_url=f"https://docs.google.com/spreadsheets/d/{SHEET_ID}",
         cache_ttl_minutes=_CACHE_TTL_MINUTES,
