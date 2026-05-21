@@ -12,6 +12,13 @@
     .session { margin: 0.5rem 0 0.5rem 1rem; }
     ul { padding-left: 1.5rem; }
     li { margin: 0.25rem 0; }
+
+    .filter-bar { margin: 0.75rem 0; }
+    .filter-bar fieldset { border: 1px solid #ccc; padding: 0.5rem 0.75rem; }
+    .filter-bar legend { font-weight: bold; padding: 0 0.25rem; }
+    .filter-bar label { display: inline-block; margin: 0.2rem 0.5rem 0.2rem 0; white-space: nowrap; }
+    .filter-actions { margin-top: 0.4rem; font-size: 0.85rem; }
+    .filter-actions a { cursor: pointer; color: #555; margin-right: 0.75rem; }
   </style>
 </head>
 <body>
@@ -19,10 +26,28 @@
   <p><strong>Practice Schedule Viewer</strong></p>
   <hr>
 
+  {% if all_groups %}
+  <div class="filter-bar">
+    <fieldset>
+      <legend>Filter groups</legend>
+      {% for group in all_groups %}
+      <label>
+        <input type="checkbox" class="group-filter" data-group="{{ group }}" checked>
+        {{ group }}
+      </label>
+      {% endfor %}
+      <div class="filter-actions">
+        <a id="select-all">select all</a>
+        <a id="clear-all">clear all</a>
+      </div>
+    </fieldset>
+  </div>
+  {% endif %}
+
   <h2>📅 {{ today.strftime('%A, %B %d, %Y') }}{% if is_today %} (Today){% endif %}</h2>
   {% if today_grouped %}
     {% for g in today_grouped %}
-      <div class="session">
+      <div class="session"{% if g.group and g.group.lower() != 'all swimmers' %} data-group="{{ g.group }}"{% endif %}>
         {% if g.group and g.group.lower() != 'all swimmers' %}
         <div>👥 Group: {{ g.group }}</div>
         {% endif %}
@@ -45,12 +70,16 @@
     <li>
       <div>{{ day.date.strftime('%a %b %d') }}</div>
       {% if day.grouped %}
-        <div>
+        <div class="upcoming-day">
           {%- for g in day.grouped %}
-            {%- if g.group and g.group.lower() != 'all swimmers' %}{{ g.group }}: {% endif %}
-            {%- for ev in g.sessions %}{{ ev.time }}{% if not loop.last %}, {% endif %}{% endfor %}
-            {%- if not loop.last %}; {% endif %}
+            {%- if g.group and g.group.lower() != 'all swimmers' %}
+            <span data-group="{{ g.group }}">{{ g.group }}: {% for ev in g.sessions %}{{ ev.time }}{% if not loop.last %}, {% endif %}{% endfor %}</span>
+            {%- else %}
+            <span>{% for ev in g.sessions %}{{ ev.time }}{% if not loop.last %}, {% endif %}{% endfor %}</span>
+            {%- endif %}
+            {%- if not loop.last %}<span class="sep">; </span>{% endif %}
           {%- endfor %}
+          <span class="no-practice" style="display:none">No practice</span>
         </div>
       {% else %}
         <div class="no-practice">No practice</div>
@@ -66,5 +95,56 @@
     <br>
     <div>Made while wearing 🏊 🥽 by Mark Mzyk</div>
   </div>
+
+  <script>
+    function activeGroups() {
+      return new Set(
+        [...document.querySelectorAll('.group-filter:checked')].map(cb => cb.dataset.group)
+      );
+    }
+
+    function applyFilter() {
+      const active = activeGroups();
+
+      // Today's sessions
+      document.querySelectorAll('.session[data-group]').forEach(el => {
+        el.style.display = active.has(el.dataset.group) ? '' : 'none';
+      });
+
+      // Upcoming: show/hide each group span and manage separators
+      document.querySelectorAll('.upcoming-day').forEach(day => {
+        const groupSpans = [...day.querySelectorAll('span[data-group]')];
+        const unnamedSpans = [...day.querySelectorAll('span:not([data-group]):not(.sep):not(.no-practice)')];
+        let anyVisible = unnamedSpans.length > 0;
+
+        groupSpans.forEach(span => {
+          const visible = active.has(span.dataset.group);
+          span.style.display = visible ? '' : 'none';
+          if (visible) anyVisible = true;
+        });
+
+        // Rebuild separators: only show between visible entries
+        const visibleEntries = [...day.querySelectorAll('span[data-group], span:not([data-group]):not(.sep):not(.no-practice)')]
+          .filter(s => s.style.display !== 'none');
+        day.querySelectorAll('.sep').forEach((sep, i) => {
+          sep.style.display = (i < visibleEntries.length - 1) ? '' : 'none';
+        });
+
+        day.querySelector('.no-practice').style.display = anyVisible ? 'none' : '';
+      });
+    }
+
+    document.querySelectorAll('.group-filter').forEach(cb => cb.addEventListener('change', applyFilter));
+
+    document.getElementById('select-all').addEventListener('click', () => {
+      document.querySelectorAll('.group-filter').forEach(cb => cb.checked = true);
+      applyFilter();
+    });
+
+    document.getElementById('clear-all').addEventListener('click', () => {
+      document.querySelectorAll('.group-filter').forEach(cb => cb.checked = false);
+      applyFilter();
+    });
+  </script>
 </body>
 </html>
