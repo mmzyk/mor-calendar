@@ -229,6 +229,18 @@ def get_practices_for_date(events: list[dict], target: date) -> list[dict]:
     return [e for e in events if e["date"] == target]
 
 
+def get_all_groups(events: list[dict]) -> list[str]:
+    """Return unique named group names in first-appearance order."""
+    seen: set[str] = set()
+    groups = []
+    for ev in events:
+        g = ev["group"]
+        if _is_named_group(g) and g not in seen:
+            seen.add(g)
+            groups.append(g)
+    return groups
+
+
 def group_events_by_group(events: list[dict]) -> list[dict]:
     """Collapse multi-session events so each group appears once with all its sessions."""
     groups = []

@@ -7,7 +7,7 @@ import os
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 from flask import Flask, render_template
-from swim_schedule import load_schedule, get_practices_for_date, group_events_by_group, TEAM_NAME, SHEET_ID
+from swim_schedule import load_schedule, get_practices_for_date, group_events_by_group, get_all_groups, TEAM_NAME, SHEET_ID
 
 app = Flask(__name__)
 _SAVE_CSV = os.environ.get("SAVE_CSV", "").lower() in ("1", "true", "yes")
@@ -35,6 +35,7 @@ def index():
     except ValueError as e:
         return f"<pre>Configuration error: {e}</pre>", 500
 
+    all_groups = get_all_groups(events)
     today_events = get_practices_for_date(events, today)
     today_grouped = group_events_by_group(today_events)
 
@@ -52,6 +53,7 @@ def index():
         team_name=TEAM_NAME,
         today=today,
         is_today=(today == datetime.now(ZoneInfo("America/New_York")).date()),
+        all_groups=all_groups,
         today_grouped=today_grouped,
         upcoming=upcoming,
         sheet_url=f"https://docs.google.com/spreadsheets/d/{SHEET_ID}",
