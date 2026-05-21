@@ -4,7 +4,8 @@ Run: python web_app.py [--port PORT]
 """
 import argparse
 import os
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 from flask import Flask, render_template
 from swim_schedule import load_schedule, get_practices_for_date, group_events_by_group, TEAM_NAME, SHEET_ID
 
@@ -16,7 +17,7 @@ def _resolve_display_date() -> date:
     """Return the date to display, from $DISPLAY_DATE if set, else today."""
     raw = os.environ.get("DISPLAY_DATE", "").strip()
     if not raw:
-        return date.today()
+        return datetime.now(ZoneInfo("America/New_York")).date()
     from swim_schedule import parse_date
     parsed = parse_date(raw)
     if parsed is None:
@@ -50,7 +51,7 @@ def index():
         "index.html",
         team_name=TEAM_NAME,
         today=today,
-        is_today=(today == date.today()),
+        is_today=(today == datetime.now(ZoneInfo("America/New_York")).date()),
         today_grouped=today_grouped,
         upcoming=upcoming,
         sheet_url=f"https://docs.google.com/spreadsheets/d/{SHEET_ID}",
