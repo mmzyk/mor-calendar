@@ -45,13 +45,12 @@
     <li>
       <div>{{ day.date.strftime('%a %b %d') }}</div>
       {% if day.grouped %}
+        {% for g in day.grouped %}
         <div>
-          {%- for g in day.grouped %}
-            {%- if g.group and g.group.lower() != 'all swimmers' %}{{ g.group }}: {% endif %}
-            {%- for ev in g.sessions %}{{ ev.time }}{% if not loop.last %}, {% endif %}{% endfor %}
-            {%- if not loop.last %}; {% endif %}
-          {%- endfor %}
+          {%- if g.group and g.group.lower() != 'all swimmers' %}{{ g.group }}: {% endif %}
+          {%- for ev in g.sessions %}{{ ev.time }}{% if not loop.last %}, {% endif %}{% endfor %}
         </div>
+        {% endfor %}
       {% else %}
         <div class="no-practice">No practice</div>
       {% endif %}
