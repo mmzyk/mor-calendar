@@ -13,7 +13,7 @@
     ul { padding-left: 1.5rem; }
     li { margin: 0.25rem 0; }
 
-    .filter-bar { margin: 0.75rem 0; }
+    .filter-bar { margin: 0.75rem 0; display: none; }
     .filter-bar fieldset { border: 1px solid #ccc; padding: 0.5rem 0.75rem; }
     .filter-bar legend { font-weight: bold; padding: 0 0.25rem; }
     .filter-bar label { display: inline-block; margin: 0.2rem 0.5rem 0.2rem 0; white-space: nowrap; }
@@ -95,6 +95,9 @@
   </div>
 
   <script>
+    // Reveal the filter bar only when JS is available
+    document.querySelectorAll('.filter-bar').forEach(el => el.style.display = 'block');
+
     const STORAGE_KEY = 'mor-group-filter';
 
     function activeGroups() {
