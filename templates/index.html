@@ -95,10 +95,30 @@
   </div>
 
   <script>
+    const STORAGE_KEY = 'mor-group-filter';
+
     function activeGroups() {
       return new Set(
         [...document.querySelectorAll('.group-filter:checked')].map(cb => cb.dataset.group)
       );
+    }
+
+    function saveFilter() {
+      const checked = [...document.querySelectorAll('.group-filter:checked')].map(cb => cb.dataset.group);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(checked));
+    }
+
+    function loadFilter() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved === null) return;
+      try {
+        const checked = new Set(JSON.parse(saved));
+        document.querySelectorAll('.group-filter').forEach(cb => {
+          cb.checked = checked.has(cb.dataset.group);
+        });
+      } catch (e) {
+        localStorage.removeItem(STORAGE_KEY);
+      }
     }
 
     function applyFilter() {
@@ -125,17 +145,26 @@
       });
     }
 
-    document.querySelectorAll('.group-filter').forEach(cb => cb.addEventListener('change', applyFilter));
+    document.querySelectorAll('.group-filter').forEach(cb => cb.addEventListener('change', () => {
+      saveFilter();
+      applyFilter();
+    }));
 
     document.getElementById('select-all').addEventListener('click', () => {
       document.querySelectorAll('.group-filter').forEach(cb => cb.checked = true);
+      saveFilter();
       applyFilter();
     });
 
     document.getElementById('clear-all').addEventListener('click', () => {
       document.querySelectorAll('.group-filter').forEach(cb => cb.checked = false);
+      saveFilter();
       applyFilter();
     });
+
+    // Restore saved selections, then apply on page load
+    loadFilter();
+    applyFilter();
   </script>
 </body>
 </html>
