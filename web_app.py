@@ -7,7 +7,7 @@ import os
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 from flask import Flask, render_template
-from swim_schedule import load_schedule, get_practices_for_date, group_events_by_group, get_all_groups, TEAM_NAME, SHEET_ID
+from swim_schedule import load_schedule, get_practices_for_date, group_events_by_group, get_all_groups, get_groups_for_dates, TEAM_NAME, SHEET_ID
 
 app = Flask(__name__)
 _SAVE_CSV = os.environ.get("SAVE_CSV", "").lower() in ("1", "true", "yes")
@@ -35,7 +35,6 @@ def index():
     except ValueError as e:
         return f"<pre>Configuration error: {e}</pre>", 500
 
-    all_groups = get_all_groups(events)
     today_events = get_practices_for_date(events, today)
     today_grouped = group_events_by_group(today_events)
 
@@ -47,6 +46,9 @@ def index():
             "date": day,
             "grouped": group_events_by_group(day_events),
         })
+
+    week_dates = [today] + [today + timedelta(days=i) for i in range(1, 8)]
+    all_groups = get_groups_for_dates(events, week_dates)
 
     return render_template(
         "index.html",

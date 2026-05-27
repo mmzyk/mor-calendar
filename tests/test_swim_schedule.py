@@ -15,6 +15,7 @@ from swim_schedule import (
     parse_schedule,
     get_practices_for_date,
     group_events_by_group,
+    get_groups_for_dates,
     fetch_sheet_as_csv,
     SHEET_URL,
     _is_week_header,
@@ -400,6 +401,51 @@ class TestGroupEventsByGroup(unittest.TestCase):
         self.assertEqual(len(result[0]["sessions"]), 1)
         self.assertEqual(result[1]["group"], "Senior Elite")
         self.assertEqual(len(result[1]["sessions"]), 2)
+
+
+class TestGetGroupsForDates(unittest.TestCase):
+    def _ev(self, group, d):
+        return {"group": group, "time": "5:00am", "location": "", "notes": "",
+                "date": d, "date_raw": "", "day_of_week": d.strftime("%A")}
+
+    def test_empty_events_returns_empty(self):
+        self.assertEqual(get_groups_for_dates([], [date(2026, 4, 6)]), [])
+
+    def test_empty_dates_returns_empty(self):
+        events = [self._ev("Senior Elite", date(2026, 4, 6))]
+        self.assertEqual(get_groups_for_dates(events, []), [])
+
+    def test_returns_groups_on_matching_dates(self):
+        events = [
+            self._ev("Senior Elite", date(2026, 4, 6)),
+            self._ev("AG 3", date(2026, 4, 7)),
+        ]
+        result = get_groups_for_dates(events, [date(2026, 4, 6), date(2026, 4, 7)])
+        self.assertEqual(result, ["Senior Elite", "AG 3"])
+
+    def test_excludes_groups_outside_date_window(self):
+        events = [
+            self._ev("Senior Elite", date(2026, 4, 6)),
+            self._ev("AG 3", date(2026, 5, 1)),
+        ]
+        result = get_groups_for_dates(events, [date(2026, 4, 6)])
+        self.assertEqual(result, ["Senior Elite"])
+
+    def test_excludes_all_swimmers(self):
+        events = [
+            self._ev("All Swimmers", date(2026, 4, 6)),
+            self._ev("Senior Elite", date(2026, 4, 6)),
+        ]
+        result = get_groups_for_dates(events, [date(2026, 4, 6)])
+        self.assertEqual(result, ["Senior Elite"])
+
+    def test_deduplicates_groups(self):
+        events = [
+            self._ev("Senior Elite", date(2026, 4, 6)),
+            self._ev("Senior Elite", date(2026, 4, 7)),
+        ]
+        result = get_groups_for_dates(events, [date(2026, 4, 6), date(2026, 4, 7)])
+        self.assertEqual(result, ["Senior Elite"])
 
 
 class TestFetchSheetAsCsv(unittest.TestCase):
