@@ -61,6 +61,10 @@ def index():
         sheet_url=f"https://docs.google.com/spreadsheets/d/{SHEET_ID}",
         cache_ttl_minutes=_CACHE_TTL_MINUTES,
         team_website=f"https://www.gomotionapp.com/team/ncmrwa/page/home",
+        # URLS to other site schedules 
+        raleigh_url="https://docs.google.com/document/d/1sjPtpfdev6lrt62RtWbPInfGoVob0Q4z/edit",
+        riverwood_url="https://docs.google.com/spreadsheets/d/10Sx_sgIKxvQ8ULZxEqWy3xeqhc69QwOFdd_oYvF-rTc/edit",
+        silverton_url="https://docs.google.com/spreadsheets/d/102A50iMHqslIHU8__UL_dhjtERMLjzeWkF0Jo1rHORc/edit",
     )
 
 
