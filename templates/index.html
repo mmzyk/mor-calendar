@@ -39,6 +39,10 @@
       <div class="filter-actions">
         <a id="select-all">select all</a>
         <a id="clear-all">clear all</a>
+        <label id="show-no-practice-label" style="margin-left: 0.5rem; color: #555;">
+          <input type="checkbox" id="show-no-practice">
+          show groups with no practice
+        </label>
       </div>
     </fieldset>
   </div>
@@ -59,6 +63,15 @@
         {% endfor %}
       </div>
     {% endfor %}
+    {% set active_today = today_grouped | map(attribute='group') | list %}
+    {% for group in all_groups %}
+      {% if group not in active_today %}
+      <div class="session no-practice-row" data-group="{{ group }}" style="display:none">
+        <div>👥 Group: {{ group }}</div>
+        <div class="no-practice">No practice</div>
+      </div>
+      {% endif %}
+    {% endfor %}
   {% else %}
     <p class="no-practice">No practice scheduled for this day.</p>
   {% endif %}
@@ -76,6 +89,12 @@
             {%- if g.group and g.group.lower() != 'all swimmers' %}{{ g.group }}: {% endif %}
             {%- for ev in g.sessions %}{{ ev.time }}{% if not loop.last %}, {% endif %}{% endfor %}
           </div>
+          {% endfor %}
+          {% set active_day = day.grouped | map(attribute='group') | list %}
+          {% for group in all_groups %}
+            {% if group not in active_day %}
+          <div class="no-practice-row no-practice" data-group="{{ group }}" style="display:none">{{ group }}: No practice</div>
+            {% endif %}
           {% endfor %}
           <div class="no-practice" style="display:none">No practice</div>
         </div>
@@ -104,6 +123,17 @@
     document.querySelectorAll('.filter-bar').forEach(el => el.style.display = 'block');
 
     const STORAGE_KEY = 'mor-group-filter';
+    const NP_STORAGE_KEY = 'mor-show-no-practice';
+
+    function saveNpToggle() {
+      const el = document.getElementById('show-no-practice');
+      if (el) localStorage.setItem(NP_STORAGE_KEY, el.checked);
+    }
+
+    function loadNpToggle() {
+      const el = document.getElementById('show-no-practice');
+      if (el) el.checked = localStorage.getItem(NP_STORAGE_KEY) === 'true';
+    }
 
     function activeGroups() {
       return new Set(
@@ -131,10 +161,15 @@
 
     function applyFilter() {
       const active = activeGroups();
+      const showNp = document.getElementById('show-no-practice')?.checked ?? false;
 
       // Today's sessions
       document.querySelectorAll('.session[data-group]').forEach(el => {
-        el.style.display = active.has(el.dataset.group) ? '' : 'none';
+        if (el.classList.contains('no-practice-row')) {
+          el.style.display = (showNp && active.has(el.dataset.group)) ? '' : 'none';
+        } else {
+          el.style.display = active.has(el.dataset.group) ? '' : 'none';
+        }
       });
 
       // Upcoming: show/hide each group div
@@ -144,12 +179,17 @@
         let anyVisible = unnamedDivs.length > 0;
 
         groupDivs.forEach(div => {
-          const visible = active.has(div.dataset.group);
+          let visible;
+          if (div.classList.contains('no-practice-row')) {
+            visible = showNp && active.has(div.dataset.group);
+          } else {
+            visible = active.has(div.dataset.group);
+          }
           div.style.display = visible ? '' : 'none';
           if (visible) anyVisible = true;
         });
 
-        day.querySelector('.no-practice').style.display = anyVisible ? 'none' : '';
+        day.querySelector('.no-practice:not([data-group])').style.display = anyVisible ? 'none' : '';
       });
     }
 
@@ -170,8 +210,14 @@
       applyFilter();
     });
 
+    document.getElementById('show-no-practice')?.addEventListener('change', () => {
+      saveNpToggle();
+      applyFilter();
+    });
+
     // Restore saved selections, then apply on page load
     loadFilter();
+    loadNpToggle();
     applyFilter();
   </script>
 </body>
