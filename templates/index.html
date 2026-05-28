@@ -88,7 +88,7 @@
   <hr>
   <div style="color: #888; font-size: 0.85rem;">
     <div>Schedule data from <a href="{{ sheet_url }}">MOR North Raleigh Swim Schedule</a>.</div>
-    <div>Cached for up to {{ cache_ttl_minutes }} minutes.</div>
+    <div>Cached for up to {{ cache_ttl_minutes }} minutes{% if cache_updated_at %}, last updated at {{ cache_updated_at }}{% endif %}.</div>
     <div>Errors possible. Always consult official communication channels for the most up-to-date information.</div>
     <br>
     <div>This is not an official site of the <a href="{{ team_website }}">Marlins of Raleigh</a>.</div>

@@ -203,6 +203,10 @@ def load_schedule(max_age_minutes: int = 30, save_csv: bool = False) -> list[dic
     return _schedule_cache
 
 
+def get_cache_fetched_at() -> float:
+    return _cache_fetched_at
+
+
 def parse_date(text: str) -> date | None:
     """Try multiple date formats and return a date object or None."""
     text = text.strip()

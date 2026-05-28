@@ -7,7 +7,7 @@ import os
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 from flask import Flask, render_template
-from swim_schedule import load_schedule, get_practices_for_date, group_events_by_group, get_all_groups, get_groups_for_dates, TEAM_NAME, SHEET_ID
+from swim_schedule import load_schedule, get_cache_fetched_at, get_practices_for_date, group_events_by_group, get_all_groups, get_groups_for_dates, TEAM_NAME, SHEET_ID
 
 app = Flask(__name__)
 _SAVE_CSV = os.environ.get("SAVE_CSV", "").lower() in ("1", "true", "yes")
@@ -29,6 +29,8 @@ def _resolve_display_date() -> date:
 def index():
     try:
         events = load_schedule(max_age_minutes=_CACHE_TTL_MINUTES, save_csv=_SAVE_CSV)
+        fetched_at = get_cache_fetched_at()
+        cache_updated_at = datetime.fromtimestamp(fetched_at, tz=ZoneInfo("America/New_York")).strftime("%-I:%M %p ET") if fetched_at else None
         today = _resolve_display_date()
     except RuntimeError as e:
         return f"<pre>Error fetching schedule: {e}</pre>", 503
@@ -60,6 +62,7 @@ def index():
         upcoming=upcoming,
         sheet_url=f"https://docs.google.com/spreadsheets/d/{SHEET_ID}",
         cache_ttl_minutes=_CACHE_TTL_MINUTES,
+        cache_updated_at=cache_updated_at,
         team_website=f"https://www.gomotionapp.com/team/ncmrwa/page/home",
         # URLS to other site schedules 
         raleigh_url="https://docs.google.com/document/d/1sjPtpfdev6lrt62RtWbPInfGoVob0Q4z/edit",
