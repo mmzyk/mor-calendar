@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 schedule_cache.csv
 claude_sessions/
+.DS_Store
