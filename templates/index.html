@@ -25,7 +25,15 @@
 
     .filter-bar { margin: 0.75rem 0; display: none; }
     .filter-bar fieldset { border: 1px solid #ccc; padding: 0.5rem 0.75rem; }
-    .filter-bar legend { font-weight: bold; padding: 0 0.25rem; }
+    .filter-bar legend { padding: 0 0.25rem; }
+    .filter-bar legend button {
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      font: inherit;
+      font-weight: bold;
+    }
     .filter-bar label { display: inline-block; margin: 0.2rem 0.5rem 0.2rem 0; white-space: nowrap; }
     .filter-actions { margin-top: 0.4rem; font-size: 0.85rem; }
     .filter-actions button {
@@ -64,20 +72,24 @@
     {% if all_groups %}
     <div class="filter-bar">
       <fieldset>
-        <legend>Filter groups</legend>
-        {% for group in all_groups %}
-        <label>
-          <input type="checkbox" class="group-filter" data-group="{{ group }}" checked>
-          {{ group }}
-        </label>
-        {% endfor %}
-        <div class="filter-actions">
-          <button id="select-all">select all</button>
-          <button id="clear-all">clear all</button>
-          <label id="show-no-practice-label" style="margin-left: 0.5rem; color: #555;">
-            <input type="checkbox" id="show-no-practice">
-            show groups with no practice
+        <legend>
+          <button id="filter-toggle" aria-expanded="true" aria-controls="filter-content">Filter groups</button>
+        </legend>
+        <div id="filter-content">
+          {% for group in all_groups %}
+          <label>
+            <input type="checkbox" class="group-filter" data-group="{{ group }}" checked>
+            {{ group }}
           </label>
+          {% endfor %}
+          <div class="filter-actions">
+            <button id="select-all">select all</button>
+            <button id="clear-all">clear all</button>
+            <label id="show-no-practice-label" style="margin-left: 0.5rem; color: #555;">
+              <input type="checkbox" id="show-no-practice">
+              show groups with no practice
+            </label>
+          </div>
         </div>
       </fieldset>
     </div>
@@ -238,6 +250,14 @@
         }
       }
     }
+
+    document.getElementById('filter-toggle')?.addEventListener('click', () => {
+      const content = document.getElementById('filter-content');
+      const btn = document.getElementById('filter-toggle');
+      const expanded = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', !expanded);
+      content.style.display = expanded ? 'none' : '';
+    });
 
     document.querySelectorAll('.group-filter').forEach(cb => cb.addEventListener('change', () => {
       saveFilter();
