@@ -36,6 +36,17 @@
       color-scheme: dark;
     }
     [data-theme="dark"] a { color: #7eb8f7; }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #1e1e1e;
+        --text: #e0e0e0;
+        --muted: #a8a8a8;
+        --border: #767676;
+        --btn-muted: #bbbbbb;
+        color-scheme: dark;
+      }
+      :root:not([data-theme="light"]) a { color: #7eb8f7; }
+    }
 
     body { font-family: monospace; max-width: 640px; margin: 2rem auto; padding: 0 1rem; background: var(--bg); color: var(--text); }
     h1 { font-size: 1.2rem; margin-bottom: 0.25rem; }
