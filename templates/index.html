@@ -89,12 +89,12 @@
       {% for g in today_grouped %}
         <dl class="session"{% if g.group and g.group.lower() != 'all swimmers' %} data-group="{{ g.group }}"{% endif %}>
           {% if g.group and g.group.lower() != 'all swimmers' %}
-          <div><dt>Group</dt><dd>{{ g.group }}</dd></div>
+          <div><dt><span aria-hidden="true">👥</span> Group</dt><dd>{{ g.group }}</dd></div>
           {% endif %}
           {% for ev in g.sessions %}
-          <div><dt>Time</dt><dd>{{ ev.time }}</dd></div>
+          <div><dt><span aria-hidden="true">🕐</span> Time</dt><dd>{{ ev.time }}</dd></div>
           {% if ev.location %}
-          <div><dt>Location</dt><dd>{{ ev.location }}</dd></div>
+          <div><dt><span aria-hidden="true">📍</span> Location</dt><dd>{{ ev.location }}</dd></div>
           {% endif %}
           {% endfor %}
         </dl>
@@ -103,7 +103,7 @@
       {% for group in all_groups %}
         {% if group not in active_today %}
         <dl class="session no-practice-row" data-group="{{ group }}" style="display:none">
-          <div><dt>Group</dt><dd>{{ group }}</dd></div>
+          <div><dt><span aria-hidden="true">👥</span> Group</dt><dd>{{ group }}</dd></div>
           <div><dt>Status</dt><dd class="no-practice">No practice</dd></div>
         </dl>
         {% endif %}
