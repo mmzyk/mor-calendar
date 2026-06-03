@@ -78,6 +78,17 @@ TEAM_NAME = "MOR North Raleigh Swim Team"
 
 Tests use `unittest` (stdlib) with `unittest.mock` for network calls — no internet connection required. The `TestParseSchedule._week_block()` helper builds minimal grid-format CSV fixtures for testing the parser.
 
+## Accessibility (WCAG 2.1 AA)
+
+Apply these rules to any change touching `templates/index.html`:
+
+- **Emoji:** Decorative emoji (used for visual flair) → `<span aria-hidden="true">🏊</span>`. Emoji that carry meaning in a sentence → `<span role="img" aria-label="description">🥽</span>`.
+- **Interactive elements:** Use `<button>` for anything that triggers an action. Never use `<a>` without an `href` as a button — it isn't keyboard-focusable.
+- **Color contrast:** Text must meet 4.5:1 against its background. The current muted grey is `#6b6b6b` (5:1 on white) — do not go lighter.
+- **Semantic structure:** Use `<dl>/<dt>/<dd>` for key-value data (group, time, location). Use `<main>` and `<footer>` landmarks. Use heading levels in order.
+- **Dynamic content:** If JS updates visible content in response to user input, announce the change via an `aria-live="polite"` region.
+- **New images or icons:** Always provide alt text or `aria-label`; use `aria-hidden="true"` only if the surrounding text already conveys the meaning.
+
 ## Git Commit Style
 - Use Conventional Commits format: `type(scope): description`
 - Types: feat, fix, docs, chore, refactor, test
