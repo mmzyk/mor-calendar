@@ -62,6 +62,7 @@
 
     .header-row { display: flex; justify-content: space-between; align-items: baseline; }
     #theme-toggle {
+      display: none;
       background: none;
       border: 1px solid var(--border);
       cursor: pointer;
@@ -224,8 +225,9 @@
   </footer>
 
   <script>
-    // Reveal the filter bar only when JS is available
+    // Reveal JS-only controls
     document.querySelectorAll('.filter-bar').forEach(el => el.style.display = 'block');
+    document.getElementById('theme-toggle').style.display = 'inline-block';
 
     const STORAGE_KEY = 'mor-group-filter';
     const NP_STORAGE_KEY = 'mor-show-no-practice';
