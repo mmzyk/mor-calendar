@@ -3,28 +3,65 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light">
+  <meta name="color-scheme" content="light dark">
   <title>{{ team_name }} - Practice Schedule</title>
   <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
   <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
   <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
   <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
   <link rel="manifest" href="{{ url_for('static', filename='site.webmanifest') }}">
+  <script>
+    (function() {
+      const t = localStorage.getItem('mor-theme');
+      if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
   <style>
-    body { font-family: monospace; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+    :root {
+      --bg: #ffffff;
+      --text: #000000;
+      --muted: #6b6b6b;
+      --border: #cccccc;
+      --btn-muted: #555555;
+      color-scheme: light;
+    }
+    [data-theme="dark"] {
+      --bg: #1e1e1e;
+      --text: #e0e0e0;
+      --muted: #a8a8a8;
+      --border: #4a4a4a;
+      --btn-muted: #bbbbbb;
+      color-scheme: dark;
+    }
+    [data-theme="dark"] a { color: #7eb8f7; }
+
+    body { font-family: monospace; max-width: 640px; margin: 2rem auto; padding: 0 1rem; background: var(--bg); color: var(--text); }
     h1 { font-size: 1.2rem; margin-bottom: 0.25rem; }
-    hr { border: none; border-top: 1px solid #ccc; margin: 1rem 0; }
-    .no-practice { color: #6b6b6b; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 1rem 0; }
+    .no-practice { color: var(--muted); }
     .session { margin: 0.5rem 0 0.5rem 1rem; }
     ul { padding-left: 1.5rem; }
     li { margin: 0.25rem 0; }
     dt { display: inline; font-weight: bold; }
     dt::after { content: ": "; }
     dd { display: inline; margin: 0; }
-    footer { color: #6b6b6b; font-size: 0.85rem; }
+    footer { color: var(--muted); font-size: 0.85rem; }
+
+    .header-row { display: flex; justify-content: space-between; align-items: baseline; }
+    #theme-toggle {
+      background: none;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      line-height: 1;
+    }
 
     .filter-bar { margin: 0.75rem 0; display: none; }
-    .filter-bar fieldset { border: 1px solid #ccc; padding: 0.5rem 0.75rem; }
+    .filter-bar fieldset { border: 1px solid var(--border); padding: 0.5rem 0.75rem; }
     .filter-bar legend { padding: 0 0.25rem; }
     .filter-bar legend button {
       background: none;
@@ -33,6 +70,7 @@
       cursor: pointer;
       font: inherit;
       font-weight: bold;
+      color: var(--text);
     }
     .filter-bar legend button::after { content: ' ▾'; }
     .filter-bar legend button[aria-expanded="false"]::after { content: ' ▸'; }
@@ -43,15 +81,16 @@
       border: none;
       padding: 0;
       cursor: pointer;
-      color: #555;
+      color: var(--btn-muted);
       font: inherit;
       font-size: 0.85rem;
       margin-right: 0.75rem;
       text-decoration: underline;
     }
+    .filter-actions label { color: var(--btn-muted); }
 
     .skip-link { position: absolute; left: -9999px; }
-    .skip-link:focus { left: 0; top: 0; padding: 0.5rem; background: #fff; z-index: 100; }
+    .skip-link:focus { left: 0; top: 0; padding: 0.5rem; background: var(--bg); z-index: 100; }
     .sr-only {
       position: absolute;
       width: 1px;
@@ -66,7 +105,10 @@
 </head>
 <body>
   <a href="#schedule" class="skip-link">Skip to schedule</a>
-  <h1><span aria-hidden="true">🏊</span> {{ team_name }}</h1>
+  <div class="header-row">
+    <h1><span aria-hidden="true">🏊</span> {{ team_name }}</h1>
+    <button id="theme-toggle" aria-label="Switch to dark mode" title="Switch to dark mode">🌙</button>
+  </div>
   <p><strong>Practice Schedule Viewer</strong></p>
   <hr>
 
@@ -87,7 +129,7 @@
           <div class="filter-actions">
             <button id="select-all">select all</button>
             <button id="clear-all">clear all</button>
-            <label id="show-no-practice-label" style="margin-left: 0.5rem; color: #555;">
+            <label id="show-no-practice-label" style="margin-left: 0.5rem;">
               <input type="checkbox" id="show-no-practice">
               show groups with no practice
             </label>
@@ -176,6 +218,31 @@
 
     const STORAGE_KEY = 'mor-group-filter';
     const NP_STORAGE_KEY = 'mor-show-no-practice';
+    const THEME_KEY = 'mor-theme';
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      const btn = document.getElementById('theme-toggle');
+      if (btn) {
+        const dark = theme === 'dark';
+        btn.textContent = dark ? '☀️' : '🌙';
+        btn.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+        btn.setAttribute('title', dark ? 'Switch to light mode' : 'Switch to dark mode');
+      }
+    }
+
+    function initTheme() {
+      const saved = localStorage.getItem(THEME_KEY);
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      applyTheme(saved || (prefersDark ? 'dark' : 'light'));
+    }
+
+    document.getElementById('theme-toggle')?.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      localStorage.setItem(THEME_KEY, next);
+      applyTheme(next);
+    });
 
     function saveNpToggle() {
       const el = document.getElementById('show-no-practice');
@@ -283,7 +350,8 @@
       applyFilter(true);
     });
 
-    // Restore saved selections, then apply on page load
+    // Restore saved selections and theme, then apply on page load
+    initTheme();
     loadFilter();
     loadNpToggle();
     applyFilter(false);
