@@ -34,6 +34,8 @@
       font: inherit;
       font-weight: bold;
     }
+    .filter-bar legend button::after { content: ' ▾'; }
+    .filter-bar legend button[aria-expanded="false"]::after { content: ' ▸'; }
     .filter-bar label { display: inline-block; margin: 0.2rem 0.5rem 0.2rem 0; white-space: nowrap; }
     .filter-actions { margin-top: 0.4rem; font-size: 0.85rem; }
     .filter-actions button {
