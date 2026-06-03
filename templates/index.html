@@ -219,6 +219,7 @@
     const STORAGE_KEY = 'mor-group-filter';
     const NP_STORAGE_KEY = 'mor-show-no-practice';
     const THEME_KEY = 'mor-theme';
+    const FILTER_OPEN_KEY = 'mor-filter-open';
 
     function applyTheme(theme) {
       document.documentElement.setAttribute('data-theme', theme);
@@ -320,12 +321,24 @@
       }
     }
 
+    function loadFilterOpen() {
+      if (localStorage.getItem(FILTER_OPEN_KEY) === 'false') {
+        const btn = document.getElementById('filter-toggle');
+        const content = document.getElementById('filter-content');
+        if (btn && content) {
+          btn.setAttribute('aria-expanded', 'false');
+          content.style.display = 'none';
+        }
+      }
+    }
+
     document.getElementById('filter-toggle')?.addEventListener('click', () => {
       const content = document.getElementById('filter-content');
       const btn = document.getElementById('filter-toggle');
       const expanded = btn.getAttribute('aria-expanded') === 'true';
       btn.setAttribute('aria-expanded', !expanded);
       content.style.display = expanded ? 'none' : '';
+      localStorage.setItem(FILTER_OPEN_KEY, !expanded);
     });
 
     document.querySelectorAll('.group-filter').forEach(cb => cb.addEventListener('change', () => {
@@ -354,6 +367,7 @@
     initTheme();
     loadFilter();
     loadNpToggle();
+    loadFilterOpen();
     applyFilter(false);
   </script>
 </body>
