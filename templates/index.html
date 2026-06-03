@@ -104,7 +104,7 @@
         {% if group not in active_today %}
         <dl class="session no-practice-row" data-group="{{ group }}" style="display:none">
           <div><dt><span aria-hidden="true">👥</span> Group</dt><dd>{{ group }}</dd></div>
-          <div><dd class="no-practice">No practice</dd></div>
+          <div><dd class="no-practice"><span aria-hidden="true">🚫</span> No practice</dd></div>
         </dl>
         {% endif %}
       {% endfor %}
