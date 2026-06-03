@@ -14,104 +14,136 @@
     body { font-family: monospace; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
     h1 { font-size: 1.2rem; margin-bottom: 0.25rem; }
     hr { border: none; border-top: 1px solid #ccc; margin: 1rem 0; }
-    .no-practice { color: #888; }
+    .no-practice { color: #6b6b6b; }
     .session { margin: 0.5rem 0 0.5rem 1rem; }
     ul { padding-left: 1.5rem; }
     li { margin: 0.25rem 0; }
+    dt { display: inline; font-weight: bold; }
+    dt::after { content: ": "; }
+    dd { display: inline; margin: 0; }
+    footer { color: #6b6b6b; font-size: 0.85rem; }
 
     .filter-bar { margin: 0.75rem 0; display: none; }
     .filter-bar fieldset { border: 1px solid #ccc; padding: 0.5rem 0.75rem; }
     .filter-bar legend { font-weight: bold; padding: 0 0.25rem; }
     .filter-bar label { display: inline-block; margin: 0.2rem 0.5rem 0.2rem 0; white-space: nowrap; }
     .filter-actions { margin-top: 0.4rem; font-size: 0.85rem; }
-    .filter-actions a { cursor: pointer; color: #555; margin-right: 0.75rem; }
+    .filter-actions button {
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      color: #555;
+      font: inherit;
+      font-size: 0.85rem;
+      margin-right: 0.75rem;
+      text-decoration: underline;
+    }
+
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus { left: 0; top: 0; padding: 0.5rem; background: #fff; z-index: 100; }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border: 0;
+    }
   </style>
 </head>
 <body>
-  <h1>🏊 {{ team_name }}</h1>
+  <a href="#schedule" class="skip-link">Skip to schedule</a>
+  <h1><span aria-hidden="true">🏊</span> {{ team_name }}</h1>
   <p><strong>Practice Schedule Viewer</strong></p>
   <hr>
 
-  {% if all_groups %}
-  <div class="filter-bar">
-    <fieldset>
-      <legend>Filter groups</legend>
-      {% for group in all_groups %}
-      <label>
-        <input type="checkbox" class="group-filter" data-group="{{ group }}" checked>
-        {{ group }}
-      </label>
-      {% endfor %}
-      <div class="filter-actions">
-        <a id="select-all">select all</a>
-        <a id="clear-all">clear all</a>
-        <label id="show-no-practice-label" style="margin-left: 0.5rem; color: #555;">
-          <input type="checkbox" id="show-no-practice">
-          show groups with no practice
+  <main>
+    {% if all_groups %}
+    <div class="filter-bar">
+      <fieldset>
+        <legend>Filter groups</legend>
+        {% for group in all_groups %}
+        <label>
+          <input type="checkbox" class="group-filter" data-group="{{ group }}" checked>
+          {{ group }}
         </label>
-      </div>
-    </fieldset>
-  </div>
-  {% endif %}
-
-  <h2>📅 {{ today.strftime('%A, %B %d, %Y') }}{% if is_today %} (Today){% endif %}</h2>
-  {% if today_grouped %}
-    {% for g in today_grouped %}
-      <div class="session"{% if g.group and g.group.lower() != 'all swimmers' %} data-group="{{ g.group }}"{% endif %}>
-        {% if g.group and g.group.lower() != 'all swimmers' %}
-        <div>👥 Group: {{ g.group }}</div>
-        {% endif %}
-        {% for ev in g.sessions %}
-        <div>🕐 Time: {{ ev.time }}</div>
-        {% if ev.location %}
-        <div>📍 Location: {{ ev.location }}</div>
-        {% endif %}
         {% endfor %}
-      </div>
-    {% endfor %}
-    {% set active_today = today_grouped | map(attribute='group') | list %}
-    {% for group in all_groups %}
-      {% if group not in active_today %}
-      <div class="session no-practice-row" data-group="{{ group }}" style="display:none">
-        <div>👥 Group: {{ group }}</div>
-        <div class="no-practice">No practice</div>
-      </div>
-      {% endif %}
-    {% endfor %}
-  {% else %}
-    <p class="no-practice">No practice scheduled for this day.</p>
-  {% endif %}
-
-  <hr>
-  <h2>📆 Upcoming (next 7 days)</h2>
-  <ul>
-  {% for day in upcoming %}
-    <li>
-      <div>{{ day.date.strftime('%a %b %d') }}</div>
-      {% if day.grouped %}
-        <div class="upcoming-day">
-          {% for g in day.grouped %}
-          <div{% if g.group and g.group.lower() != 'all swimmers' %} data-group="{{ g.group }}"{% endif %}>
-            {%- if g.group and g.group.lower() != 'all swimmers' %}{{ g.group }}: {% endif %}
-            {%- for ev in g.sessions %}{{ ev.time }}{% if not loop.last %}, {% endif %}{% endfor %}
-          </div>
-          {% endfor %}
-          {% set active_day = day.grouped | map(attribute='group') | list %}
-          {% for group in all_groups %}
-            {% if group not in active_day %}
-          <div class="no-practice-row no-practice" data-group="{{ group }}" style="display:none">{{ group }}: No practice</div>
-            {% endif %}
-          {% endfor %}
-          <div class="no-practice" style="display:none">No practice</div>
+        <div class="filter-actions">
+          <button id="select-all">select all</button>
+          <button id="clear-all">clear all</button>
+          <label id="show-no-practice-label" style="margin-left: 0.5rem; color: #555;">
+            <input type="checkbox" id="show-no-practice">
+            show groups with no practice
+          </label>
         </div>
-      {% else %}
-        <div class="no-practice">No practice</div>
-      {% endif %}
-    </li>
-  {% endfor %}
-  </ul>
-  <hr>
-  <div style="color: #888; font-size: 0.85rem;">
+      </fieldset>
+    </div>
+    <div id="filter-status" aria-live="polite" class="sr-only"></div>
+    {% endif %}
+
+    <h2 id="schedule"><span aria-hidden="true">📅</span> {{ today.strftime('%A, %B %d, %Y') }}{% if is_today %} (Today){% endif %}</h2>
+    {% if today_grouped %}
+      {% for g in today_grouped %}
+        <dl class="session"{% if g.group and g.group.lower() != 'all swimmers' %} data-group="{{ g.group }}"{% endif %}>
+          {% if g.group and g.group.lower() != 'all swimmers' %}
+          <div><dt>Group</dt><dd>{{ g.group }}</dd></div>
+          {% endif %}
+          {% for ev in g.sessions %}
+          <div><dt>Time</dt><dd>{{ ev.time }}</dd></div>
+          {% if ev.location %}
+          <div><dt>Location</dt><dd>{{ ev.location }}</dd></div>
+          {% endif %}
+          {% endfor %}
+        </dl>
+      {% endfor %}
+      {% set active_today = today_grouped | map(attribute='group') | list %}
+      {% for group in all_groups %}
+        {% if group not in active_today %}
+        <dl class="session no-practice-row" data-group="{{ group }}" style="display:none">
+          <div><dt>Group</dt><dd>{{ group }}</dd></div>
+          <div><dt>Status</dt><dd class="no-practice">No practice</dd></div>
+        </dl>
+        {% endif %}
+      {% endfor %}
+    {% else %}
+      <p class="no-practice">No practice scheduled for this day.</p>
+    {% endif %}
+
+    <hr>
+    <h2><span aria-hidden="true">📆</span> Upcoming (next 7 days)</h2>
+    <ul>
+    {% for day in upcoming %}
+      <li>
+        <div>{{ day.date.strftime('%a %b %d') }}</div>
+        {% if day.grouped %}
+          <div class="upcoming-day">
+            {% for g in day.grouped %}
+            <div{% if g.group and g.group.lower() != 'all swimmers' %} data-group="{{ g.group }}"{% endif %}>
+              {%- if g.group and g.group.lower() != 'all swimmers' %}{{ g.group }}: {% endif %}
+              {%- for ev in g.sessions %}{{ ev.time }}{% if not loop.last %}, {% endif %}{% endfor %}
+            </div>
+            {% endfor %}
+            {% set active_day = day.grouped | map(attribute='group') | list %}
+            {% for group in all_groups %}
+              {% if group not in active_day %}
+            <div class="no-practice-row no-practice" data-group="{{ group }}" style="display:none">{{ group }}: No practice</div>
+              {% endif %}
+            {% endfor %}
+            <div class="no-practice" style="display:none">No practice</div>
+          </div>
+        {% else %}
+          <div class="no-practice">No practice</div>
+        {% endif %}
+      </li>
+    {% endfor %}
+    </ul>
+    <hr>
+  </main>
+
+  <footer>
     <div>Schedule data from <a href="{{ sheet_url }}">MOR North Raleigh Swim Schedule</a>.</div>
     <div>Cached for up to {{ cache_ttl_minutes }} minutes{% if cache_updated_at %}, last updated at {{ cache_updated_at }}{% endif %}.</div>
     <div>Errors possible. Always consult official communication channels for the most up-to-date information.</div>
@@ -121,8 +153,8 @@
     <div>Other Marlins of Raleigh schedules:</div>
     <div><a href="{{ raleigh_url }}">Raleigh</a> | <a href="{{ riverwood_url }}">Riverwood</a> | <a href="{{ silverton_url }}">Silverton</a></div>
     <br>
-    <div>Made while wearing 🥽 by Mark Mzyk</div>
-  </div>
+    <div>Made while wearing <span aria-hidden="true">🥽</span> by Mark Mzyk</div>
+  </footer>
 
   <script>
     // Reveal the filter bar only when JS is available
@@ -165,7 +197,7 @@
       }
     }
 
-    function applyFilter() {
+    function applyFilter(announce) {
       const active = activeGroups();
       const showNp = document.getElementById('show-no-practice')?.checked ?? false;
 
@@ -197,34 +229,42 @@
 
         day.querySelector('.no-practice:not([data-group])').style.display = anyVisible ? 'none' : '';
       });
+
+      if (announce) {
+        const statusEl = document.getElementById('filter-status');
+        if (statusEl) {
+          const count = active.size;
+          statusEl.textContent = `Showing ${count} group${count !== 1 ? 's' : ''}`;
+        }
+      }
     }
 
     document.querySelectorAll('.group-filter').forEach(cb => cb.addEventListener('change', () => {
       saveFilter();
-      applyFilter();
+      applyFilter(true);
     }));
 
     document.getElementById('select-all').addEventListener('click', () => {
       document.querySelectorAll('.group-filter').forEach(cb => cb.checked = true);
       saveFilter();
-      applyFilter();
+      applyFilter(true);
     });
 
     document.getElementById('clear-all').addEventListener('click', () => {
       document.querySelectorAll('.group-filter').forEach(cb => cb.checked = false);
       saveFilter();
-      applyFilter();
+      applyFilter(true);
     });
 
     document.getElementById('show-no-practice')?.addEventListener('change', () => {
       saveNpToggle();
-      applyFilter();
+      applyFilter(true);
     });
 
     // Restore saved selections, then apply on page load
     loadFilter();
     loadNpToggle();
-    applyFilter();
+    applyFilter(false);
   </script>
 </body>
 </html>

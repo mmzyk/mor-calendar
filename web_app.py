@@ -33,9 +33,9 @@ def index():
         cache_updated_at = datetime.fromtimestamp(fetched_at, tz=ZoneInfo("America/New_York")).strftime("%-I:%M %p ET") if fetched_at else None
         today = _resolve_display_date()
     except RuntimeError as e:
-        return f"<pre>Error fetching schedule: {e}</pre>", 503
+        return f"<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'><title>Error</title></head><body><pre>Error fetching schedule: {e}</pre></body></html>", 503
     except ValueError as e:
-        return f"<pre>Configuration error: {e}</pre>", 500
+        return f"<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'><title>Error</title></head><body><pre>Configuration error: {e}</pre></body></html>", 500
 
     today_events = get_practices_for_date(events, today)
     today_grouped = group_events_by_group(today_events)
