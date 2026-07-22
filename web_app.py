@@ -4,12 +4,15 @@ Run: python web_app.py [--port PORT]
 """
 import argparse
 import os
-from datetime import date, datetime, timedelta
+import re
+from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
-from flask import Flask, render_template
-from swim_schedule import load_schedule, get_cache_fetched_at, get_practices_for_date, group_events_by_group, get_all_groups, get_groups_for_dates, TEAM_NAME, SHEET_ID
+from flask import Flask, render_template, request, url_for, Response
+from icalendar import Calendar, Event as IcsEvent
+from swim_schedule import load_schedule, get_cache_fetched_at, get_practices_for_date, group_events_by_group, get_all_groups, get_groups_for_dates, parse_time_range, TEAM_NAME, SHEET_ID
 
 app = Flask(__name__)
+_EASTERN = ZoneInfo("America/New_York")
 _SAVE_CSV = os.environ.get("SAVE_CSV", "").lower() in ("1", "true", "yes")
 _CACHE_TTL_MINUTES = int(os.environ.get("CACHE_TTL_MINUTES", 5))
 
@@ -52,6 +55,12 @@ def index():
     week_dates = [today] + [today + timedelta(days=i) for i in range(1, 8)]
     all_groups = get_groups_for_dates(events, week_dates)
 
+    # Honor the proxy's scheme (e.g. Heroku terminates TLS) so the
+    # subscribe URL shown to parents is https, not http.
+    scheme = request.headers.get("X-Forwarded-Proto", request.scheme).split(",")[0].strip()
+    ics_url = url_for("schedule_ics", _external=True, _scheme=scheme)
+    group_ics_urls = [(g, url_for("schedule_ics", group=g, _external=True, _scheme=scheme)) for g in all_groups]
+
     return render_template(
         "index.html",
         team_name=TEAM_NAME,
@@ -60,6 +69,8 @@ def index():
         all_groups=all_groups,
         today_grouped=today_grouped,
         upcoming=upcoming,
+        ics_url=ics_url,
+        group_ics_urls=group_ics_urls,
         sheet_url=f"https://docs.google.com/spreadsheets/d/{SHEET_ID}",
         cache_ttl_minutes=_CACHE_TTL_MINUTES,
         cache_updated_at=cache_updated_at,
@@ -68,6 +79,71 @@ def index():
         raleigh_url="https://docs.google.com/document/d/1sjPtpfdev6lrt62RtWbPInfGoVob0Q4z/edit",
         riverwood_url="https://docs.google.com/spreadsheets/d/10Sx_sgIKxvQ8ULZxEqWy3xeqhc69QwOFdd_oYvF-rTc/edit",
         silverton_url="https://docs.google.com/spreadsheets/d/102A50iMHqslIHU8__UL_dhjtERMLjzeWkF0Jo1rHORc/edit",
+    )
+
+
+def _slug(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
+
+def _build_ics(events: list[dict]) -> bytes:
+    """Build an iCalendar feed from parsed practice events.
+
+    Times are emitted in UTC (converted from Eastern per-date, so DST is
+    handled correctly). Events whose time string can't be parsed become
+    all-day events rather than being dropped.
+    """
+    cal = Calendar()
+    cal.add("prodid", f"-//{TEAM_NAME}//swim-schedule//EN")
+    cal.add("version", "2.0")
+    cal.add("x-wr-calname", f"{TEAM_NAME} Practices")
+    cal.add("x-wr-timezone", "America/New_York")
+
+    for ev in events:
+        vevent = IcsEvent()
+        # UID must be stable across fetches so calendar clients update
+        # events in place instead of duplicating them.
+        vevent.add("uid", f"{ev['date'].isoformat()}-{_slug(ev['group'])}-{_slug(ev['time'])}@mor-swim-schedule")
+        vevent.add("summary", f"{ev['group']}: {ev['time']}")
+        vevent.add("dtstamp", datetime.now(timezone.utc))
+
+        parsed = parse_time_range(ev["time"])
+        if parsed:
+            start_t, end_t = parsed
+            vevent.add("dtstart", datetime.combine(ev["date"], start_t, tzinfo=_EASTERN).astimezone(timezone.utc))
+            vevent.add("dtend", datetime.combine(ev["date"], end_t, tzinfo=_EASTERN).astimezone(timezone.utc))
+        else:
+            vevent.add("dtstart", ev["date"])
+            vevent.add("dtend", ev["date"] + timedelta(days=1))
+
+        cal.add_component(vevent)
+
+    return cal.to_ical()
+
+
+@app.route("/schedule.ics")
+def schedule_ics():
+    try:
+        events = load_schedule(max_age_minutes=_CACHE_TTL_MINUTES, save_csv=_SAVE_CSV)
+        today = _resolve_display_date()
+    except RuntimeError as e:
+        return Response(f"Error fetching schedule: {e}", status=503, mimetype="text/plain")
+    except ValueError as e:
+        return Response(f"Configuration error: {e}", status=500, mimetype="text/plain")
+
+    # The sheet retains past seasons; prune stale events so the feed stays
+    # small enough for calendar apps (Google rejects very large feeds).
+    cutoff = today - timedelta(days=7)
+    events = [ev for ev in events if ev["date"] >= cutoff]
+
+    group = request.args.get("group", "").strip()
+    if group:
+        events = [ev for ev in events if ev["group"].lower() == group.lower()]
+
+    return Response(
+        _build_ics(events),
+        mimetype="text/calendar",
+        headers={"Content-Disposition": 'inline; filename="mor-swim-schedule.ics"'},
     )
 
 

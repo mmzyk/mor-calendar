@@ -69,6 +69,10 @@
     dt::after { content: ": "; }
     dd { display: inline; margin: 0; }
     footer { color: var(--muted); font-size: 0.85rem; }
+    .ics-url { word-break: break-all; font-size: 0.9em; }
+    details { margin: 0.5rem 0; }
+    details summary { cursor: pointer; }
+    .feed-note { color: var(--muted); font-size: 0.85rem; }
 
     .header-row { display: flex; justify-content: space-between; align-items: baseline; }
     #theme-toggle {
@@ -218,6 +222,48 @@
       </li>
     {% endfor %}
     </ul>
+    <hr>
+
+    <h2 id="calendar"><span aria-hidden="true">🗓️</span> Get practices in your calendar</h2>
+    <p>Subscribe once and every practice shows up in your own calendar app, updating automatically when the schedule changes.</p>
+    <p>Calendar feed address:<br><code class="ics-url">{{ ics_url }}</code></p>
+    <details>
+      <summary>How to subscribe in Google Calendar</summary>
+      <ol>
+        <li>On a computer, open <a href="https://calendar.google.com/calendar/u/0/r/settings/addbyurl">Google Calendar &rarr; Add calendar &rarr; From URL</a>.</li>
+        <li>Paste the feed address above and select <strong>Add calendar</strong>.</li>
+      </ol>
+      <p>The Google Calendar phone app can't add feeds directly — subscribe once on the web and it syncs to your phone automatically.</p>
+    </details>
+    <details>
+      <summary>How to subscribe in Apple Calendar (iPhone, iPad, Mac)</summary>
+      <p>On an Apple device, this link opens your calendar with the subscription ready to confirm:
+        <a href="{{ ics_url | replace('https://', 'webcal://') | replace('http://', 'webcal://') }}">Subscribe in Apple Calendar</a>.</p>
+      <p>Or add it by hand:</p>
+      <ul>
+        <li><strong>iPhone/iPad:</strong> Settings &rarr; Apps &rarr; Calendar &rarr; Calendar Accounts &rarr; Add Account &rarr; Other &rarr; Add Subscribed Calendar, then paste the feed address.</li>
+        <li><strong>Mac:</strong> in the Calendar app, File &rarr; New Calendar Subscription, then paste the feed address.</li>
+      </ul>
+    </details>
+    <details>
+      <summary>How to subscribe in Outlook</summary>
+      <ol>
+        <li>In Outlook on the web, choose <strong>Add calendar &rarr; Subscribe from web</strong>.</li>
+        <li>Paste the feed address and choose <strong>Import</strong>.</li>
+      </ol>
+    </details>
+    {% if group_ics_urls %}
+    <details>
+      <summary>Follow just one group</summary>
+      <p>Use one of these feed addresses instead to get only that group's practices:</p>
+      <ul>
+        {% for group, url in group_ics_urls %}
+        <li>{{ group }}:<br><code class="ics-url">{{ url }}</code></li>
+        {% endfor %}
+      </ul>
+    </details>
+    {% endif %}
+    <p class="feed-note">Calendar apps refresh subscribed feeds on their own schedule, so changes can take up to a day to appear there. For same-day changes, check this page.</p>
     <hr>
   </main>
 
