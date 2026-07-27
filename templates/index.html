@@ -226,7 +226,18 @@
 
     <h2 id="calendar"><span aria-hidden="true">🗓️</span> Get practices in your calendar</h2>
     <p>Subscribe once and every practice shows up in your own calendar app, updating automatically when the schedule changes.</p>
-    <p>Calendar feed address:<br><code class="ics-url">{{ ics_url }}</code></p>
+    <p>Calendar feed address (includes all groups):<br><code class="ics-url">{{ ics_url }}</code></p>
+    {% if group_ics_urls %}
+    <details>
+      <summary>Follow just one group</summary>
+      <p>Use one of these feed addresses instead to get only that group's practices:</p>
+      <ul>
+        {% for group, url in group_ics_urls %}
+        <li>{{ group }}:<br><code class="ics-url">{{ url }}</code></li>
+        {% endfor %}
+      </ul>
+    </details>
+    {% endif %}
     <details>
       <summary>How to subscribe in Google Calendar</summary>
       <ol>
@@ -252,17 +263,6 @@
         <li>Paste the feed address and choose <strong>Import</strong>.</li>
       </ol>
     </details>
-    {% if group_ics_urls %}
-    <details>
-      <summary>Follow just one group</summary>
-      <p>Use one of these feed addresses instead to get only that group's practices:</p>
-      <ul>
-        {% for group, url in group_ics_urls %}
-        <li>{{ group }}:<br><code class="ics-url">{{ url }}</code></li>
-        {% endfor %}
-      </ul>
-    </details>
-    {% endif %}
     <p class="feed-note">Calendar apps refresh subscribed feeds on their own schedule, so changes can take up to a day to appear there. For same-day changes, check this page.</p>
     <hr>
   </main>
