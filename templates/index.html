@@ -240,14 +240,22 @@
     <h2 id="calendar"><span aria-hidden="true">🗓️</span> Get practices in your calendar</h2>
     <p>Subscribe and every practice shows up in your own calendar app, updating automatically when the schedule changes.</p>
     <p>Calendar apps refresh subscribed feeds on their own schedule, so changes can take up to a day to appear. For same-day changes, check this page.</p>
+    <br>
     <p>Calendar feed address (includes all groups):<br>
-      <span class="ics-row">
-        <code class="ics-url" id="ics-url-all">{{ ics_url }}</code>
-        <button type="button" class="copy-btn" data-copy-target="ics-url-all" data-label="Copy calendar feed address" aria-label="Copy calendar feed address"><span aria-hidden="true">📋</span></button>
-      </span><br>
-      <a class="webcal-link" href="{{ ics_url | replace('https://', 'webcal://') | replace('http://', 'webcal://') }}">Subscribe via webcal://</a> (opens directly in Apple Calendar and other webcal-aware apps)
+      <ul>
+        <li>
+          <span class="ics-row">
+            <code class="ics-url" id="ics-url-all">{{ ics_url }}</code>
+            <button type="button" class="copy-btn" data-copy-target="ics-url-all" data-label="Copy calendar feed address" aria-label="Copy calendar feed address"><span aria-hidden="true">📋</span></button>
+          </span><br>
+        </li>
+        <li>
+         <a class="webcal-link" href="{{ ics_url | replace('https://', 'webcal://') | replace('http://', 'webcal://') }}">Subscribe via webcal</a> (opens directly in Apple Calendar and other webcal-aware apps)
+        </li>
+    </ul>
     </p>
     {% if group_ics_urls %}
+    <br>
     <details>
       <summary>Follow just one group</summary>
       <p>Use one of these feed addresses to get only that group's practices:</p>
@@ -258,7 +266,7 @@
             <code class="ics-url" id="ics-url-group-{{ loop.index }}">{{ url }}</code>
             <button type="button" class="copy-btn" data-copy-target="ics-url-group-{{ loop.index }}" data-label="Copy {{ group }} calendar feed address" aria-label="Copy {{ group }} calendar feed address"><span aria-hidden="true">📋</span></button>
           </span><br>
-          <a class="webcal-link" href="{{ url | replace('https://', 'webcal://') | replace('http://', 'webcal://') }}">Subscribe via webcal://</a>
+          <a class="webcal-link" href="{{ url | replace('https://', 'webcal://') | replace('http://', 'webcal://') }}">Subscribe via webcal</a>
         </li>
         {% endfor %}
       </ul>
@@ -276,7 +284,7 @@
     </details>
     <details>
       <summary>How to subscribe in Apple Calendar</summary>
-      <p>On an Apple device, tap a "Subscribe via webcal://" link above to open your calendar with the subscription ready to confirm.</p>
+      <p>On an Apple device, tap a "Subscribe via webcal" link above to open your calendar with the subscription ready to confirm.</p>
       <p>Or add it by hand:</p>
       <ul>
         <li><strong>iPhone/iPad:</strong> Settings &rarr; Apps &rarr; Calendar &rarr; Calendar Accounts &rarr; Add Account &rarr; Other &rarr; Add Subscribed Calendar, then paste the feed address.</li>
