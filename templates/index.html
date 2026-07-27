@@ -179,7 +179,8 @@
     <div id="filter-status" aria-live="polite" class="sr-only"></div>
     {% endif %}
 
-    <h2 id="schedule"><span aria-hidden="true">📅</span> {{ today.strftime('%A, %B %d, %Y') }}{% if is_today %} (Today){% endif %}</h2>
+    <details id="section-today" class="section-toggle" open>
+    <summary><h2 id="schedule"><span aria-hidden="true">📅</span> {{ today.strftime('%A, %B %d, %Y') }}{% if is_today %} (Today){% endif %}</h2></summary>
     {% if today_grouped %}
       {% for g in today_grouped %}
         <dl class="session"{% if g.group and g.group.lower() != 'all swimmers' %} data-group="{{ g.group }}"{% endif %}>
@@ -206,9 +207,11 @@
     {% else %}
       <p class="no-practice">No practice scheduled for this day.</p>
     {% endif %}
+    </details>
 
     <hr>
-    <h2><span aria-hidden="true">📆</span> Upcoming (next 7 days)</h2>
+    <details id="section-upcoming" class="section-toggle" open>
+    <summary><h2><span aria-hidden="true">📆</span> Upcoming (next 7 days)</h2></summary>
     <ul>
     {% for day in upcoming %}
       <li>
@@ -235,9 +238,11 @@
       </li>
     {% endfor %}
     </ul>
-    <hr>
+    </details>
 
-    <h2 id="calendar"><span aria-hidden="true">🗓️</span> Get practices in your calendar</h2>
+    <hr>
+    <details id="section-calendar" class="section-toggle" open>
+    <summary><h2 id="calendar"><span aria-hidden="true">🗓️</span> Get practices in your calendar</h2></summary>
     <p>Subscribe and every practice shows up in your own calendar app, updating automatically when the schedule changes.</p>
     <p>Calendar apps refresh subscribed feeds on their own schedule, so changes can take up to a day to appear. For same-day changes, check this page.</p>
     <br>
@@ -298,7 +303,8 @@
         <li>Paste the feed address and choose <strong>Import</strong>.</li>
       </ol>
     </details>
-   
+    </details>
+
     <hr>
   </main>
 
@@ -502,6 +508,17 @@
         } catch (e) {
           if (statusEl) statusEl.textContent = 'Could not copy to clipboard';
         }
+      });
+    });
+
+    const SECTION_KEY_PREFIX = 'mor-section-open-';
+
+    document.querySelectorAll('.section-toggle').forEach(details => {
+      const key = SECTION_KEY_PREFIX + details.id;
+      const saved = localStorage.getItem(key);
+      if (saved !== null) details.open = saved === 'true';
+      details.addEventListener('toggle', () => {
+        localStorage.setItem(key, details.open);
       });
     });
 

@@ -245,5 +245,39 @@ class TestIndexAdvertisesCalendarFeed(unittest.TestCase):
         self.assertIn("webcal://localhost/schedule.ics", body)
 
 
+class TestCollapsibleSections(unittest.TestCase):
+    """Today, Upcoming, and the calendar-feed section must each be a
+    native <details> the user can collapse, with state persisted client-side."""
+
+    def _get_index(self):
+        from web_app import app
+        with patch("web_app.load_schedule", return_value=_fixture_events()):
+            with patch.dict(os.environ, {"DISPLAY_DATE": "2026-06-01"}):
+                return app.test_client().get("/")
+
+    def test_each_major_section_is_an_open_details_element(self):
+        import re
+        body = self._get_index().get_data(as_text=True)
+        for section_id in ("section-today", "section-upcoming", "section-calendar"):
+            pattern = rf'<details id="{section_id}" class="section-toggle" open>'
+            self.assertRegex(body, pattern, f"{section_id} is not a collapsible <details> section")
+
+    def test_section_headings_live_inside_summary(self):
+        import re
+        body = self._get_index().get_data(as_text=True)
+        self.assertRegex(body, r'<summary><h2 id="schedule">')
+        self.assertRegex(body, r'<summary><h2[^>]*>.*?Upcoming')
+        self.assertRegex(body, r'<summary><h2 id="calendar">')
+
+    def test_details_tags_are_balanced(self):
+        body = self._get_index().get_data(as_text=True)
+        self.assertEqual(body.count("<details"), body.count("</details>"))
+
+    def test_js_persists_section_open_state_via_toggle_event(self):
+        body = self._get_index().get_data(as_text=True)
+        self.assertIn("section-toggle", body)
+        self.assertIn("addEventListener('toggle'", body)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
