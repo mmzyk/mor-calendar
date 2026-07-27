@@ -210,6 +210,28 @@ class TestIndexAdvertisesCalendarFeed(unittest.TestCase):
         body = self._get_index().get_data(as_text=True)
         self.assertIn("group=Senior+Elite", body)
 
+    def test_every_feed_url_has_a_matching_copy_button(self):
+        import re
+        body = self._get_index().get_data(as_text=True)
+        url_ids = set(re.findall(r'<code class="ics-url" id="([^"]+)"', body))
+        copy_targets = set(re.findall(r'class="copy-btn"[^>]*data-copy-target="([^"]+)"', body))
+        self.assertGreaterEqual(len(url_ids), 2)  # at least the all-groups feed + one group feed
+        self.assertEqual(url_ids, copy_targets)
+
+    def test_copy_buttons_are_real_buttons_with_labels(self):
+        import re
+        body = self._get_index().get_data(as_text=True)
+        buttons = re.findall(r'<button[^>]*class="copy-btn"[^>]*>', body)
+        self.assertTrue(buttons)
+        for btn in buttons:
+            self.assertIn('type="button"', btn)
+            self.assertIn("aria-label=", btn)
+
+    def test_copy_status_live_region_present(self):
+        body = self._get_index().get_data(as_text=True)
+        self.assertIn('id="copy-status"', body)
+        self.assertIn('aria-live="polite"', body)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

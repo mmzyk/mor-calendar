@@ -70,6 +70,18 @@
     dd { display: inline; margin: 0; }
     footer { color: var(--muted); font-size: 0.85rem; }
     .ics-url { word-break: break-all; font-size: 0.9em; }
+    .ics-row { display: inline-flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
+    .copy-btn {
+      display: none;
+      background: none;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      font-size: 0.85rem;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      line-height: 1.4;
+      flex-shrink: 0;
+    }
     details { margin: 0.5rem 0; }
     details summary { cursor: pointer; }
     .feed-note { color: var(--muted); font-size: 0.85rem; }
@@ -227,18 +239,29 @@
     <h2 id="calendar"><span aria-hidden="true">🗓️</span> Get practices in your calendar</h2>
     <p>Subscribe and every practice shows up in your own calendar app, updating automatically when the schedule changes.</p>
     <p>Calendar apps refresh subscribed feeds on their own schedule, so changes can take up to a day to appear. For same-day changes, check this page.</p>
-    <p>Calendar feed address (includes all groups):<br><code class="ics-url">{{ ics_url }}</code></p>
+    <p>Calendar feed address (includes all groups):<br>
+      <span class="ics-row">
+        <code class="ics-url" id="ics-url-all">{{ ics_url }}</code>
+        <button type="button" class="copy-btn" data-copy-target="ics-url-all" data-label="Copy calendar feed address" aria-label="Copy calendar feed address"><span aria-hidden="true">📋</span></button>
+      </span>
+    </p>
     {% if group_ics_urls %}
     <details>
       <summary>Follow just one group</summary>
       <p>Use one of these feed addresses to get only that group's practices:</p>
       <ul>
         {% for group, url in group_ics_urls %}
-        <li>{{ group }}:<br><code class="ics-url">{{ url }}</code></li>
+        <li>{{ group }}:<br>
+          <span class="ics-row">
+            <code class="ics-url" id="ics-url-group-{{ loop.index }}">{{ url }}</code>
+            <button type="button" class="copy-btn" data-copy-target="ics-url-group-{{ loop.index }}" data-label="Copy {{ group }} calendar feed address" aria-label="Copy {{ group }} calendar feed address"><span aria-hidden="true">📋</span></button>
+          </span>
+        </li>
         {% endfor %}
       </ul>
     </details>
     {% endif %}
+    <div id="copy-status" aria-live="polite" class="sr-only"></div>
     <br>
     <details>
       <summary>How to subscribe in Google Calendar</summary>
@@ -286,6 +309,7 @@
     // Reveal JS-only controls
     document.querySelectorAll('.filter-bar').forEach(el => el.style.display = 'block');
     document.getElementById('theme-toggle').style.display = 'inline-block';
+    document.querySelectorAll('.copy-btn').forEach(el => el.style.display = 'inline-block');
 
     const STORAGE_KEY = 'mor-group-filter';
     const NP_STORAGE_KEY = 'mor-show-no-practice';
@@ -432,6 +456,43 @@
     document.getElementById('show-no-practice')?.addEventListener('change', () => {
       saveNpToggle();
       applyFilter(true);
+    });
+
+    async function copyText(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return;
+      }
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const target = document.getElementById(btn.dataset.copyTarget);
+        const statusEl = document.getElementById('copy-status');
+        if (!target) return;
+        try {
+          await copyText(target.textContent);
+          if (statusEl) statusEl.textContent = 'Copied to clipboard';
+          const icon = btn.querySelector('span');
+          const original = icon.textContent;
+          icon.textContent = '✅';
+          btn.setAttribute('aria-label', 'Copied');
+          setTimeout(() => {
+            icon.textContent = original;
+            btn.setAttribute('aria-label', btn.dataset.label);
+          }, 1500);
+        } catch (e) {
+          if (statusEl) statusEl.textContent = 'Could not copy to clipboard';
+        }
+      });
     });
 
     // Restore saved selections and theme, then apply on page load
