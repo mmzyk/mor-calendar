@@ -17,8 +17,8 @@ _SAVE_CSV = os.environ.get("SAVE_CSV", "").lower() in ("1", "true", "yes")
 _CACHE_TTL_MINUTES = int(os.environ.get("CACHE_TTL_MINUTES", 5))
 
 # Toggle to show/hide the notification banner announcing new features or changes.
-_SHOW_BANNER = True
-_BANNER_TEXT = "Placeholder: announce a new feature or change here."
+_SHOW_BANNER = False 
+_BANNER_TEXT = "Calendar integration and a feedback form are now available."
 
 def _resolve_display_date() -> date:
     """Return the date to display, from $DISPLAY_DATE if set, else today."""
