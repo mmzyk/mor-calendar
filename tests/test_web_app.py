@@ -278,6 +278,16 @@ class TestCollapsibleSections(unittest.TestCase):
         self.assertIn("section-toggle", body)
         self.assertIn("addEventListener('toggle'", body)
 
+    def test_section_toggle_marker_is_placed_at_end_of_header_line(self):
+        body = self._get_index().get_data(as_text=True)
+        # The default <summary> marker renders before block content, pushing
+        # it above the heading. Suppressing it and laying the header out as
+        # a flex row (marker as a trailing ::after) puts the marker at the
+        # end of the same line as the heading text.
+        self.assertIn(".section-toggle > summary", body)
+        self.assertIn("list-style: none", body)
+        self.assertIn("justify-content: space-between", body)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

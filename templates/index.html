@@ -87,6 +87,23 @@
     .feed-note { color: var(--muted); font-size: 0.85rem; }
     .webcal-link { font-size: 0.85rem; }
 
+    .section-toggle > summary {
+      list-style: none;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    .section-toggle > summary::-webkit-details-marker { display: none; }
+    .section-toggle > summary h2 { margin: 0; }
+    .section-toggle > summary::after {
+      content: '▸';
+      color: var(--muted);
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+    .section-toggle[open] > summary::after { content: '▾'; }
+
     .header-row { display: flex; justify-content: space-between; align-items: baseline; }
     #theme-toggle {
       display: none;
