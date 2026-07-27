@@ -35,6 +35,8 @@
       --muted: #6b6b6b;
       --border: #767676;
       --btn-muted: #555555;
+      --banner-bg: #fff8e1;
+      --banner-border: #a68a00;
       color-scheme: light;
     }
     [data-theme="dark"] {
@@ -43,6 +45,8 @@
       --muted: #a8a8a8;
       --border: #767676;
       --btn-muted: #bbbbbb;
+      --banner-bg: #3a3320;
+      --banner-border: #c9a800;
       color-scheme: dark;
     }
     [data-theme="dark"] a { color: #7eb8f7; }
@@ -53,6 +57,8 @@
         --muted: #a8a8a8;
         --border: #767676;
         --btn-muted: #bbbbbb;
+        --banner-bg: #3a3320;
+        --banner-border: #c9a800;
         color-scheme: dark;
       }
       :root:not([data-theme="light"]) a { color: #7eb8f7; }
@@ -103,6 +109,14 @@
       flex-shrink: 0;
     }
     .section-toggle[open] > summary::after { content: '▾'; }
+
+    .banner {
+      background: var(--banner-bg);
+      border: 1px solid var(--banner-border);
+      border-radius: 4px;
+      padding: 0.5rem 0.75rem;
+      margin: 0.75rem 0;
+    }
 
     .header-row { display: flex; justify-content: space-between; align-items: baseline; }
     #theme-toggle {
@@ -169,6 +183,10 @@
   <hr>
 
   <main>
+    {% if show_banner %}
+    <div class="banner"><span aria-hidden="true">📣</span> {{ banner_text }}</div>
+    {% endif %}
+
     {% if all_groups %}
     <div class="filter-bar">
       <fieldset>

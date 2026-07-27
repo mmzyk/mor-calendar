@@ -16,6 +16,10 @@ _EASTERN = ZoneInfo("America/New_York")
 _SAVE_CSV = os.environ.get("SAVE_CSV", "").lower() in ("1", "true", "yes")
 _CACHE_TTL_MINUTES = int(os.environ.get("CACHE_TTL_MINUTES", 5))
 
+# Toggle to show/hide the notification banner announcing new features or changes.
+_SHOW_BANNER = True
+_BANNER_TEXT = "Placeholder: announce a new feature or change here."
+
 def _resolve_display_date() -> date:
     """Return the date to display, from $DISPLAY_DATE if set, else today."""
     raw = os.environ.get("DISPLAY_DATE", "").strip()
@@ -64,6 +68,8 @@ def index():
     return render_template(
         "index.html",
         team_name=TEAM_NAME,
+        show_banner=_SHOW_BANNER,
+        banner_text=_BANNER_TEXT,
         today=today,
         is_today=(today == datetime.now(ZoneInfo("America/New_York")).date()),
         all_groups=all_groups,
