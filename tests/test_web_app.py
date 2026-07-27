@@ -232,6 +232,18 @@ class TestIndexAdvertisesCalendarFeed(unittest.TestCase):
         self.assertIn('id="copy-status"', body)
         self.assertIn('aria-live="polite"', body)
 
+    def test_every_feed_url_has_a_matching_webcal_link(self):
+        import re
+        body = self._get_index().get_data(as_text=True)
+        url_ids = set(re.findall(r'<code class="ics-url" id="([^"]+)"', body))
+        webcal_hrefs = re.findall(r'href="(webcal://[^"]+)"', body)
+        self.assertEqual(len(webcal_hrefs), len(url_ids))
+        self.assertTrue(any("group=Senior+Elite" in h for h in webcal_hrefs))
+
+    def test_webcal_link_swaps_scheme_not_rest_of_url(self):
+        body = self._get_index().get_data(as_text=True)
+        self.assertIn("webcal://localhost/schedule.ics", body)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
