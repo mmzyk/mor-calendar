@@ -225,12 +225,13 @@
     <hr>
 
     <h2 id="calendar"><span aria-hidden="true">🗓️</span> Get practices in your calendar</h2>
-    <p>Subscribe once and every practice shows up in your own calendar app, updating automatically when the schedule changes.</p>
+    <p>Subscribe and every practice shows up in your own calendar app, updating automatically when the schedule changes.</p>
+    <p>Calendar apps refresh subscribed feeds on their own schedule, so changes can take up to a day to appear. For same-day changes, check this page.</p>
     <p>Calendar feed address (includes all groups):<br><code class="ics-url">{{ ics_url }}</code></p>
     {% if group_ics_urls %}
     <details>
       <summary>Follow just one group</summary>
-      <p>Use one of these feed addresses instead to get only that group's practices:</p>
+      <p>Use one of these feed addresses to get only that group's practices:</p>
       <ul>
         {% for group, url in group_ics_urls %}
         <li>{{ group }}:<br><code class="ics-url">{{ url }}</code></li>
@@ -238,6 +239,7 @@
       </ul>
     </details>
     {% endif %}
+    <br>
     <details>
       <summary>How to subscribe in Google Calendar</summary>
       <ol>
@@ -247,7 +249,7 @@
       <p>The Google Calendar phone app can't add feeds directly — subscribe once on the web and it syncs to your phone automatically.</p>
     </details>
     <details>
-      <summary>How to subscribe in Apple Calendar (iPhone, iPad, Mac)</summary>
+      <summary>How to subscribe in Apple Calendar</summary>
       <p>On an Apple device, this link opens your calendar with the subscription ready to confirm:
         <a href="{{ ics_url | replace('https://', 'webcal://') | replace('http://', 'webcal://') }}">Subscribe in Apple Calendar</a>.</p>
       <p>Or add it by hand:</p>
@@ -263,7 +265,7 @@
         <li>Paste the feed address and choose <strong>Import</strong>.</li>
       </ol>
     </details>
-    <p class="feed-note">Calendar apps refresh subscribed feeds on their own schedule, so changes can take up to a day to appear there. For same-day changes, check this page.</p>
+   
     <hr>
   </main>
 
