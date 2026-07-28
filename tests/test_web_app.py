@@ -179,6 +179,21 @@ class TestScheduleIcsRoute(unittest.TestCase):
             "MOR North Raleigh Swim Team Practices - Senior Elite",
         )
 
+    def _name(self, path="/schedule.ics"):
+        # RFC 7986 NAME property, preferred by newer calendar clients.
+        from icalendar import Calendar
+        cal = Calendar.from_ical(self._get(path).get_data(as_text=True))
+        return str(cal.get("name"))
+
+    def test_rfc7986_name_matches_calname_for_all_groups(self):
+        self.assertEqual(self._name(), self._calname())
+        self.assertEqual(self._name(), "MOR North Raleigh Swim Team Practices")
+
+    def test_rfc7986_name_reflects_group_and_matches_calname(self):
+        path = "/schedule.ics?group=Senior+Elite"
+        self.assertEqual(self._name(path), self._calname(path))
+        self.assertEqual(self._name(path), "MOR North Raleigh Swim Team Practices - Senior Elite")
+
     def test_uids_are_stable_across_requests(self):
         def uids(body):
             return sorted(line for line in body.splitlines() if line.startswith("UID"))

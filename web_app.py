@@ -108,6 +108,10 @@ def _build_ics(events: list[dict], group: str = "") -> bytes:
     cal = Calendar()
     cal.add("prodid", f"-//{TEAM_NAME}//swim-schedule//EN")
     cal.add("version", "2.0")
+    # NAME (RFC 7986) is the standard calendar-name property preferred by
+    # newer clients; X-WR-CALNAME is the legacy field older clients read.
+    # Emit both to maximize the chance the name is displayed.
+    cal.add("name", calname)
     cal.add("x-wr-calname", calname)
     cal.add("x-wr-timezone", "America/New_York")
 
