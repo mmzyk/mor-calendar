@@ -6,7 +6,7 @@ and tells parents what practice times are today (or any day they choose).
 
 import sys
 import re
-from datetime import datetime, date
+from datetime import datetime, date, time
 import urllib.request
 import csv
 import io
@@ -227,6 +227,55 @@ def parse_date(text: str) -> date | None:
         except ValueError:
             continue
     return None
+
+
+_TIME_RANGE_RE = re.compile(
+    r"(\d{1,2})(?::(\d{2}))?\s*(am|pm|a|p)?\s*[-–]\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm|a|p)?",
+    re.IGNORECASE,
+)
+
+
+def parse_time_range(text: str) -> "tuple[time, time] | None":
+    """
+    Extract a (start, end) time pair from a sheet time string like
+    "5:00-6:30am RAV", "3:30-5:30pm OPT +wts", "10a-12p RAV SAT!", or "1-3p GWC".
+
+    Returns None when no unambiguous time range is present (e.g. "Qualifier
+    Meet", or a range with no am/pm marker at all) so callers can fall back
+    to treating the entry as an all-day event.
+    """
+    m = _TIME_RANGE_RE.search(text or "")
+    if not m:
+        return None
+    h1_raw, m1_raw, mer1_raw, h2_raw, m2_raw, mer2_raw = m.groups()
+    h1, h2 = int(h1_raw), int(h2_raw)
+    m1, m2 = int(m1_raw or 0), int(m2_raw or 0)
+    if not (1 <= h1 <= 12 and 1 <= h2 <= 12 and m1 <= 59 and m2 <= 59):
+        return None
+
+    mer1 = (mer1_raw or "").lower()[:1]
+    mer2 = (mer2_raw or "").lower()[:1]
+    if not mer1 and not mer2:
+        return None  # ambiguous — could be morning or afternoon
+    if not mer2:
+        mer2 = mer1
+    if not mer1:
+        mer1 = mer2
+
+    def to_24h(hour: int, meridiem: str) -> int:
+        if meridiem == "a":
+            return 0 if hour == 12 else hour
+        return 12 if hour == 12 else hour + 12
+
+    start = time(to_24h(h1, mer1), m1)
+    end = time(to_24h(h2, mer2), m2)
+    # Start meridiem was inferred; if that makes the range backwards
+    # (e.g. "11:00-1:00pm" -> 11pm-1pm), the start must be the other half of the day.
+    if start >= end and not mer1_raw:
+        start = time(to_24h(h1, "a" if mer1 == "p" else "p"), m1)
+    if start >= end:
+        return None
+    return (start, end)
 
 
 def get_practices_for_date(events: list[dict], target: date) -> list[dict]:
