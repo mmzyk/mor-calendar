@@ -75,17 +75,23 @@
     dt::after { content: ": "; }
     dd { display: inline; margin: 0; }
     footer { color: var(--muted); font-size: 0.85rem; }
+    .footer-group + .footer-group { margin-top: 1rem; }
+    .feed-address { margin: 0.75rem 0; }
     .ics-url { word-break: break-all; font-size: 0.9em; }
     .ics-row { display: inline-flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
     .copy-btn {
       display: none;
+      align-items: center;
+      justify-content: center;
       background: none;
       border: 1px solid var(--border);
       cursor: pointer;
-      font-size: 0.85rem;
-      padding: 0.1rem 0.4rem;
+      font-size: 0.9rem;
+      padding: 0.25rem 0.5rem;
+      min-width: 1.75rem;
+      min-height: 1.75rem;
       border-radius: 4px;
-      line-height: 1.4;
+      line-height: 1;
       flex-shrink: 0;
     }
     details { margin: 0.5rem 0; }
@@ -175,16 +181,18 @@
 </head>
 <body>
   <a href="#schedule" class="skip-link">Skip to schedule</a>
-  <h1><span aria-hidden="true">🏊</span> {{ team_name }}</h1>
-  <div class="header-row">
-    <p><strong>Practice Schedule Viewer</strong></p>
-    <button id="theme-toggle" aria-label="Switch to dark mode" title="Switch to dark mode">🌙</button>
-  </div>
+  <header>
+    <h1><span aria-hidden="true">🏊</span> {{ team_name }}</h1>
+    <div class="header-row">
+      <p><strong>Practice Schedule Viewer</strong></p>
+      <button id="theme-toggle" aria-label="Switch to dark mode" title="Switch to dark mode">🌙</button>
+    </div>
+  </header>
   <hr>
 
   <main>
     {% if show_banner %}
-    <div class="banner"><span aria-hidden="true">📣</span> {{ banner_text }}</div>
+    <div class="banner" role="note"><span aria-hidden="true">📣</span> {{ banner_text }}</div>
     {% endif %}
 
     {% if all_groups %}
@@ -283,7 +291,6 @@
     <summary><span class="section-title"><span aria-hidden="true">🗓️</span> Get practices in your calendar</span></summary>
     <p>Subscribe and every practice shows up in your own calendar app, updating automatically when the schedule changes.</p>
     <p>Calendar apps refresh subscribed feeds on their own schedule, so changes can take up to a day to appear. For same-day changes, check above or the official communication channels.</p>
-    <br>
     <div class="feed-address">
       <p>Calendar feed address (includes all groups):</p>
       <ul>
@@ -299,7 +306,6 @@
       </ul>
     </div>
     {% if group_ics_urls %}
-    <br>
     <details>
       <summary>Follow just one group</summary>
       <p>Use one of these feed addresses to get only that group's practices:</p>
@@ -317,7 +323,6 @@
     </details>
     {% endif %}
     <div id="copy-status" aria-live="polite" class="sr-only"></div>
-    <br>
     <details>
       <summary>How to subscribe in Google Calendar</summary>
       <ol>
@@ -348,25 +353,31 @@
   </main>
 
   <footer>
-    <div>Schedule data from <a href="{{ sheet_url }}">MOR North Raleigh Swim Schedule</a>.</div>
-    <div>Cached for up to {{ cache_ttl_minutes }} minutes{% if cache_updated_at %}, last updated at {{ cache_updated_at }}{% endif %}.</div>
-    <div>Errors possible. Always consult official communication channels for the most up-to-date information.</div>
-    <br>
-    <div>This is not an official site of the <a href="{{ team_website }}">Marlins of Raleigh</a>.</div>
-    <br>
-    <div>Other Marlins of Raleigh schedules:</div>
-    <div><a href="{{ raleigh_url }}">Raleigh</a> | <a href="{{ riverwood_url }}">Riverwood</a> | <a href="{{ silverton_url }}">Silverton</a></div>
-    <br>
-    <div>Made while wearing <span role="img" aria-label="swim goggles">🥽</span> by Mark Mzyk. If this saves you a trip to the wrong pool, a <a href="https://ko-fi.com/markmzyk">tip for <span role="img" aria-label="coffee">☕</span></a> is appreciated.</div>
-    <br>
-    <div><span aria-hidden="true">✍️</span> Found a bug or have an idea? <a href="https://docs.google.com/forms/d/e/1FAIpQLSdPiZDeSXJgecBpuQA4b05TqPQ3eGxAh-sFXdfL9Ah3hthdvA/viewform">Share feedback</a>.</div>
+    <div class="footer-group">
+      <div>Schedule data from <a href="{{ sheet_url }}">MOR North Raleigh Swim Schedule</a>.</div>
+      <div>Cached for up to {{ cache_ttl_minutes }} minutes{% if cache_updated_at %}, last updated at {{ cache_updated_at }}{% endif %}.</div>
+      <div>Errors possible. Always consult official communication channels for the most up-to-date information.</div>
+    </div>
+    <div class="footer-group">
+      <div>This is not an official site of the <a href="{{ team_website }}">Marlins of Raleigh</a>.</div>
+    </div>
+    <div class="footer-group">
+      <div>Other Marlins of Raleigh schedules:</div>
+      <div><a href="{{ raleigh_url }}">Raleigh</a> | <a href="{{ riverwood_url }}">Riverwood</a> | <a href="{{ silverton_url }}">Silverton</a></div>
+    </div>
+    <div class="footer-group">
+      <div>Made while wearing <span role="img" aria-label="swim goggles">🥽</span> by Mark Mzyk. If this saves you a trip to the wrong pool, a <a href="https://ko-fi.com/markmzyk">tip for <span role="img" aria-label="coffee">☕</span></a> is appreciated.</div>
+    </div>
+    <div class="footer-group">
+      <div><span aria-hidden="true">✍️</span> Found a bug or have an idea? <a href="https://docs.google.com/forms/d/e/1FAIpQLSdPiZDeSXJgecBpuQA4b05TqPQ3eGxAh-sFXdfL9Ah3hthdvA/viewform">Share feedback</a>.</div>
+    </div>
   </footer>
 
   <script>
     // Reveal JS-only controls
     document.querySelectorAll('.filter-bar').forEach(el => el.style.display = 'block');
     document.getElementById('theme-toggle').style.display = 'inline-block';
-    document.querySelectorAll('.copy-btn').forEach(el => el.style.display = 'inline-block');
+    document.querySelectorAll('.copy-btn').forEach(el => el.style.display = 'inline-flex');
 
     const STORAGE_KEY = 'mor-group-filter';
     const NP_STORAGE_KEY = 'mor-show-no-practice';

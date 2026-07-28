@@ -320,5 +320,43 @@ class TestCollapsibleSections(unittest.TestCase):
         self.assertIn("justify-content: space-between", body)
 
 
+class TestLandmarksAndBanner(unittest.TestCase):
+    import re
+
+    def _get(self, show_banner=True):
+        import web_app
+        from web_app import app
+        with patch("web_app.load_schedule", return_value=_fixture_events()):
+            with patch.dict(os.environ, {"DISPLAY_DATE": "2026-06-01"}):
+                with patch.object(web_app, "_SHOW_BANNER", show_banner):
+                    return app.test_client().get("/")
+
+    def test_top_of_page_is_in_a_header_landmark(self):
+        import re
+        body = self._get().get_data(as_text=True)
+        self.assertRegex(body, r"<header>\s*<h1")
+        header = re.search(r"<header>.*?</header>", body, re.S).group(0)
+        # The theme toggle must live inside the header so landmark navigation
+        # can reach it.
+        self.assertIn('id="theme-toggle"', header)
+
+    def test_banner_is_marked_as_a_note(self):
+        body = self._get(show_banner=True).get_data(as_text=True)
+        self.assertRegex(body, r'<div class="banner" role="note"')
+
+    def test_footer_uses_no_presentational_br(self):
+        import re
+        body = self._get().get_data(as_text=True)
+        footer = re.search(r"<footer>.*?</footer>", body, re.S).group(0)
+        self.assertNotIn("<br>", footer)
+
+    def test_copy_button_meets_minimum_target_size(self):
+        import re
+        body = self._get().get_data(as_text=True)
+        css = re.search(r"\.copy-btn\s*\{[^}]*\}", body).group(0)
+        self.assertIn("min-height", css)
+        self.assertIn("min-width", css)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
