@@ -92,17 +92,23 @@ def _slug(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
 
 
-def _build_ics(events: list[dict]) -> bytes:
+def _build_ics(events: list[dict], group: str = "") -> bytes:
     """Build an iCalendar feed from parsed practice events.
 
     Times are emitted in UTC (converted from Eastern per-date, so DST is
     handled correctly). Events whose time string can't be parsed become
-    all-day events rather than being dropped.
+    all-day events rather than being dropped. When ``group`` is given, its
+    name is appended to the calendar title so a single-group subscription
+    is distinguishable in the user's calendar app.
     """
+    calname = f"{TEAM_NAME} Practices"
+    if group:
+        calname += f" - {group}"
+
     cal = Calendar()
     cal.add("prodid", f"-//{TEAM_NAME}//swim-schedule//EN")
     cal.add("version", "2.0")
-    cal.add("x-wr-calname", f"{TEAM_NAME} Practices")
+    cal.add("x-wr-calname", calname)
     cal.add("x-wr-timezone", "America/New_York")
 
     for ev in events:
@@ -143,11 +149,15 @@ def schedule_ics():
     events = [ev for ev in events if ev["date"] >= cutoff]
 
     group = request.args.get("group", "").strip()
+    group_label = ""
     if group:
         events = [ev for ev in events if ev["group"].lower() == group.lower()]
+        # Prefer the group's canonical casing from the sheet; fall back to
+        # the query value when the group matched nothing.
+        group_label = events[0]["group"] if events else group
 
     return Response(
-        _build_ics(events),
+        _build_ics(events, group=group_label),
         mimetype="text/calendar",
         headers={"Content-Disposition": 'inline; filename="mor-swim-schedule.ics"'},
     )

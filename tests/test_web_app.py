@@ -158,6 +158,27 @@ class TestScheduleIcsRoute(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertNotIn("BEGIN:VEVENT", resp.get_data(as_text=True))
 
+    def _calname(self, path="/schedule.ics"):
+        from icalendar import Calendar
+        cal = Calendar.from_ical(self._get(path).get_data(as_text=True))
+        return str(cal.get("x-wr-calname"))
+
+    def test_all_groups_feed_title_has_no_group_suffix(self):
+        self.assertEqual(self._calname(), "MOR North Raleigh Swim Team Practices")
+
+    def test_group_feed_title_reflects_group_name(self):
+        self.assertEqual(
+            self._calname("/schedule.ics?group=Senior+Elite"),
+            "MOR North Raleigh Swim Team Practices - Senior Elite",
+        )
+
+    def test_group_feed_title_uses_canonical_group_casing(self):
+        # Query casing differs; title should use the group's real name.
+        self.assertEqual(
+            self._calname("/schedule.ics?group=senior+elite"),
+            "MOR North Raleigh Swim Team Practices - Senior Elite",
+        )
+
     def test_uids_are_stable_across_requests(self):
         def uids(body):
             return sorted(line for line in body.splitlines() if line.startswith("UID"))
