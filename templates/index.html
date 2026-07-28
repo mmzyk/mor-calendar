@@ -101,7 +101,7 @@
       gap: 0.5rem;
     }
     .section-toggle > summary::-webkit-details-marker { display: none; }
-    .section-toggle > summary h2 { margin: 0; }
+    .section-title { font-size: 1.5em; font-weight: bold; margin: 0; }
     .section-toggle > summary::after {
       content: '▸';
       color: var(--muted);
@@ -214,8 +214,9 @@
     <div id="filter-status" aria-live="polite" class="sr-only"></div>
     {% endif %}
 
+    <h2 id="schedule" class="sr-only" tabindex="-1">Today's schedule</h2>
     <details id="section-today" class="section-toggle" open>
-    <summary><h2 id="schedule"><span aria-hidden="true">📅</span> {{ today.strftime('%A, %B %d, %Y') }}{% if is_today %} (Today){% endif %}</h2></summary>
+    <summary><span class="section-title"><span aria-hidden="true">📅</span> {{ today.strftime('%A, %B %d, %Y') }}{% if is_today %} (Today){% endif %}</span></summary>
     {% if today_grouped %}
       {% for g in today_grouped %}
         <dl class="session"{% if g.group and g.group.lower() != 'all swimmers' %} data-group="{{ g.group }}"{% endif %}>
@@ -245,8 +246,9 @@
     </details>
 
     <hr>
+    <h2 class="sr-only">Upcoming practices</h2>
     <details id="section-upcoming" class="section-toggle" open>
-    <summary><h2><span aria-hidden="true">📆</span> Upcoming (next 7 days)</h2></summary>
+    <summary><span class="section-title"><span aria-hidden="true">📆</span> Upcoming (next 7 days)</span></summary>
     <ul>
     {% for day in upcoming %}
       <li>
@@ -276,24 +278,26 @@
     </details>
 
     <hr>
+    <h2 id="calendar" class="sr-only">Get practices in your calendar</h2>
     <details id="section-calendar" class="section-toggle" open>
-    <summary><h2 id="calendar"><span aria-hidden="true">🗓️</span> Get practices in your calendar</h2></summary>
+    <summary><span class="section-title"><span aria-hidden="true">🗓️</span> Get practices in your calendar</span></summary>
     <p>Subscribe and every practice shows up in your own calendar app, updating automatically when the schedule changes.</p>
     <p>Calendar apps refresh subscribed feeds on their own schedule, so changes can take up to a day to appear. For same-day changes, check above or the official communication channels.</p>
     <br>
-    <p>Calendar feed address (includes all groups):<br>
+    <div class="feed-address">
+      <p>Calendar feed address (includes all groups):</p>
       <ul>
         <li>
           <span class="ics-row">
             <code class="ics-url" id="ics-url-all">{{ ics_url }}</code>
             <button type="button" class="copy-btn" data-copy-target="ics-url-all" data-label="Copy calendar feed address" aria-label="Copy calendar feed address"><span aria-hidden="true">📋</span></button>
-          </span><br>
+          </span>
         </li>
         <li>
-         <a class="webcal-link" href="{{ ics_url | replace('https://', 'webcal://') | replace('http://', 'webcal://') }}">Subscribe via webcal</a> (opens directly in Apple Calendar and other webcal-aware apps; if it doesn't work please try the manual directions below.)
+         <a class="webcal-link" href="{{ ics_url | replace('https://', 'webcal://') | replace('http://', 'webcal://') }}" aria-label="Subscribe to all groups via webcal">Subscribe via webcal</a> (opens directly in Apple Calendar and other webcal-aware apps; if it doesn't work please try the manual directions below.)
         </li>
-    </ul>
-    </p>
+      </ul>
+    </div>
     {% if group_ics_urls %}
     <br>
     <details>
@@ -306,7 +310,7 @@
             <code class="ics-url" id="ics-url-group-{{ loop.index }}">{{ url }}</code>
             <button type="button" class="copy-btn" data-copy-target="ics-url-group-{{ loop.index }}" data-label="Copy {{ group }} calendar feed address" aria-label="Copy {{ group }} calendar feed address"><span aria-hidden="true">📋</span></button>
           </span><br>
-          <a class="webcal-link" href="{{ url | replace('https://', 'webcal://') | replace('http://', 'webcal://') }}">Subscribe via webcal</a>
+          <a class="webcal-link" href="{{ url | replace('https://', 'webcal://') | replace('http://', 'webcal://') }}" aria-label="Subscribe to {{ group }} via webcal">Subscribe via webcal</a>
         </li>
         {% endfor %}
       </ul>

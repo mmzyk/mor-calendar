@@ -283,12 +283,22 @@ class TestCollapsibleSections(unittest.TestCase):
             pattern = rf'<details id="{section_id}" class="section-toggle" open>'
             self.assertRegex(body, pattern, f"{section_id} is not a collapsible <details> section")
 
-    def test_section_headings_live_inside_summary(self):
-        import re
+    def test_section_titles_are_real_headings_outside_summary(self):
+        # A <summary> has a button role, whose descendants are presentational,
+        # so a heading inside it is not exposed for heading navigation. The
+        # real <h2>s must live outside the <summary>; the visible clickable
+        # title inside the summary is a non-heading .section-title span.
         body = self._get_index().get_data(as_text=True)
-        self.assertRegex(body, r'<summary><h2 id="schedule">')
-        self.assertRegex(body, r'<summary><h2[^>]*>.*?Upcoming')
-        self.assertRegex(body, r'<summary><h2 id="calendar">')
+        self.assertRegex(body, r'<h2[^>]*id="schedule"[^>]*>\s*Today')
+        self.assertRegex(body, r'<h2[^>]*id="calendar"[^>]*>')
+        self.assertNotRegex(body, r'<summary><h2')
+        self.assertIn('class="section-title"', body)
+
+    def test_skip_link_target_is_focusable(self):
+        # The skip link points at #schedule; that target needs tabindex="-1"
+        # so activating the link reliably moves keyboard focus to it.
+        body = self._get_index().get_data(as_text=True)
+        self.assertRegex(body, r'<h2[^>]*id="schedule"[^>]*tabindex="-1"')
 
     def test_details_tags_are_balanced(self):
         body = self._get_index().get_data(as_text=True)
