@@ -153,12 +153,15 @@ def schedule_ics():
     events = [ev for ev in events if ev["date"] >= cutoff]
 
     group = request.args.get("group", "").strip()
-    group_label = ""
     if group:
         events = [ev for ev in events if ev["group"].lower() == group.lower()]
         # Prefer the group's canonical casing from the sheet; fall back to
         # the query value when the group matched nothing.
         group_label = events[0]["group"] if events else group
+    else:
+        # Give the all-groups feed a parallel suffix so its calendar name
+        # matches the style of the per-group feeds.
+        group_label = "All Groups"
 
     return Response(
         _build_ics(events, group=group_label),

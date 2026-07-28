@@ -163,8 +163,10 @@ class TestScheduleIcsRoute(unittest.TestCase):
         cal = Calendar.from_ical(self._get(path).get_data(as_text=True))
         return str(cal.get("x-wr-calname"))
 
-    def test_all_groups_feed_title_has_no_group_suffix(self):
-        self.assertEqual(self._calname(), "MOR North Raleigh Swim Team Practices")
+    def test_all_groups_feed_title_has_all_groups_suffix(self):
+        # The all-groups feed uses an explicit "All Groups" suffix so it
+        # matches the naming style of the per-group feeds.
+        self.assertEqual(self._calname(), "MOR North Raleigh Swim Team Practices - All Groups")
 
     def test_group_feed_title_reflects_group_name(self):
         self.assertEqual(
@@ -187,7 +189,7 @@ class TestScheduleIcsRoute(unittest.TestCase):
 
     def test_rfc7986_name_matches_calname_for_all_groups(self):
         self.assertEqual(self._name(), self._calname())
-        self.assertEqual(self._name(), "MOR North Raleigh Swim Team Practices")
+        self.assertEqual(self._name(), "MOR North Raleigh Swim Team Practices - All Groups")
 
     def test_rfc7986_name_reflects_group_and_matches_calname(self):
         path = "/schedule.ics?group=Senior+Elite"
