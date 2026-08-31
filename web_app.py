@@ -9,7 +9,7 @@ from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from flask import Flask, render_template, request, url_for, Response
 from icalendar import Calendar, Event as IcsEvent
-from swim_schedule import load_schedule, get_cache_fetched_at, get_practices_for_date, group_events_by_group, get_all_groups, get_groups_for_dates, parse_time_range, TEAM_NAME, SHEET_ID
+from swim_schedule import load_schedule, get_cache_fetched_at, get_practices_for_date, group_events_by_group, get_all_groups, get_display_groups, parse_time_range, TEAM_NAME, SHEET_ID
 
 app = Flask(__name__)
 _EASTERN = ZoneInfo("America/New_York")
@@ -57,7 +57,9 @@ def index():
         })
 
     week_dates = [today] + [today + timedelta(days=i) for i in range(1, 8)]
-    all_groups = get_groups_for_dates(events, week_dates)
+    # Core training groups are always listed (even in rest weeks); transient
+    # groups appear only in weeks they're active.
+    all_groups = get_display_groups(events, week_dates)
 
     # Honor the proxy's scheme (e.g. Heroku terminates TLS) so the
     # subscribe URL shown to parents is https, not http.

@@ -16,6 +16,8 @@ from swim_schedule import (
     get_practices_for_date,
     group_events_by_group,
     get_groups_for_dates,
+    get_display_groups,
+    CORE_GROUPS,
     fetch_sheet_as_csv,
     SHEET_URL,
     _is_week_header,
@@ -483,6 +485,55 @@ class TestGetGroupsForDates(unittest.TestCase):
             self._ev("Senior Elite", date(2026, 4, 7)),
         ]
         result = get_groups_for_dates(events, [date(2026, 4, 6), date(2026, 4, 7)])
+        self.assertEqual(result, ["Senior Elite"])
+
+
+class TestGetDisplayGroups(unittest.TestCase):
+    def _ev(self, group, d):
+        return {"group": group, "time": "5:00am", "location": "", "notes": "",
+                "date": d, "date_raw": "", "day_of_week": d.strftime("%A")}
+
+    def test_core_groups_shown_even_with_no_practice_this_week(self):
+        # Core groups practicing only in a later week are still listed for the
+        # current (rest) week, which has no events at all.
+        rest_week = [date(2026, 4, 6)]
+        events = [self._ev(g, date(2026, 5, 4)) for g in CORE_GROUPS]  # outside week
+        result = get_display_groups(events, rest_week)
+        self.assertEqual(result, list(CORE_GROUPS))
+
+    def test_core_groups_kept_in_canonical_order(self):
+        events = [self._ev(g, date(2026, 4, 6)) for g in reversed(CORE_GROUPS)]
+        result = get_display_groups(events, [date(2026, 4, 6)])
+        self.assertEqual(result, list(CORE_GROUPS))
+
+    def test_transient_group_appended_only_when_active(self):
+        week = [date(2026, 4, 6)]
+        events = [self._ev(g, date(2026, 4, 6)) for g in CORE_GROUPS]
+        events.append(self._ev("Pre-season Clinic", date(2026, 4, 6)))
+        result = get_display_groups(events, week)
+        self.assertEqual(result[:len(CORE_GROUPS)], list(CORE_GROUPS))
+        self.assertEqual(result[len(CORE_GROUPS):], ["Pre-season Clinic"])
+
+    def test_transient_group_dropped_when_not_active_this_week(self):
+        # Pre-season Clinic exists in the data but only in a past week.
+        events = [
+            self._ev("Senior Elite", date(2026, 4, 6)),
+            self._ev("Pre-season Clinic", date(2026, 1, 5)),
+        ]
+        result = get_display_groups(events, [date(2026, 4, 6)])
+        self.assertNotIn("Pre-season Clinic", result)
+
+    def test_transient_group_not_duplicated_if_named_like_core(self):
+        # A core group active this week must not be appended a second time.
+        events = [self._ev("Senior Elite", date(2026, 4, 6))]
+        result = get_display_groups(events, [date(2026, 4, 6)])
+        self.assertEqual(result.count("Senior Elite"), 1)
+
+    def test_unknown_core_group_omitted(self):
+        # If a core group never appears anywhere in the data (e.g. renamed in the
+        # sheet), it is not shown, so stale names don't linger in the box.
+        events = [self._ev("Senior Elite", date(2026, 4, 6))]
+        result = get_display_groups(events, [date(2026, 4, 6)])
         self.assertEqual(result, ["Senior Elite"])
 
 
