@@ -15,6 +15,18 @@ import io
 SHEET_ID = "1mudmCQkme9X2MFTCLCB2_sCmyJD6z8UqvmcdGcWGY7k"
 SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&id={SHEET_ID}"
 TEAM_NAME = "MOR North Raleigh Swim Team"
+
+# The year-round training groups. These are always listed in the group box —
+# even during rest/taper weeks when they have no practice — so parents can see
+# and subscribe to their swimmer's group regardless of the current week. Other
+# groups (seasonal programs like Masters/Swim League, and one-off entries like a
+# pre-season clinic) are "transient": they appear only in weeks they're active.
+# Listed in the canonical display order used for the group box.
+CORE_GROUPS = [
+    "Senior Elite",
+    "Senior 3", "Senior 2", "Senior 1",
+    "AG 4", "AG 3", "AG 2", "AG 1 A", "AG 1 B",
+]
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -310,6 +322,25 @@ def get_groups_for_dates(events: list[dict], dates: "list[date]") -> list[str]:
                 seen.add(g)
                 groups.append(g)
     return groups
+
+
+def get_display_groups(events: list[dict], dates: "list[date]") -> list[str]:
+    """Return the groups to list in the group box for the given week.
+
+    CORE_GROUPS are always included (in canonical order) so year-round training
+    groups stay visible even during weeks they have no practice. Any transient
+    group with a practice on the given dates is appended in first-appearance
+    order. A core group is only omitted if it never appears anywhere in the
+    parsed schedule (e.g. it was renamed in the sheet), which keeps stale names
+    out of the box.
+    """
+    core_set = set(CORE_GROUPS)
+    known = set(get_all_groups(events))
+    display = [g for g in CORE_GROUPS if g in known]
+    for g in get_groups_for_dates(events, dates):
+        if g not in core_set:
+            display.append(g)
+    return display
 
 
 def group_events_by_group(events: list[dict]) -> list[dict]:
