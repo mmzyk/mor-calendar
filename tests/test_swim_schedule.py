@@ -94,6 +94,17 @@ class TestGridHelpers(unittest.TestCase):
     def test_is_week_header_new_format_fall(self):
         self.assertTrue(_is_week_header(["Sept 29-Oct 5", "Mon. 9/29"]))
 
+    def test_is_week_header_spaces_around_dash(self):
+        # 2026-27 season introduced labels with whitespace around the dash.
+        self.assertTrue(_is_week_header(["Aug31 - Sept 6", "Mon. 8/31"]))
+        self.assertTrue(_is_week_header(["Sept 28 - Oct4", "Mon. 9/28"]))
+        self.assertTrue(_is_week_header(["Dec 30 - Jan 5", "Mon. 12/30"]))
+        self.assertTrue(_is_week_header(["Feb 24- Mar2", "Mon. 2/24"]))
+
+    def test_is_week_header_trailing_month_omitted(self):
+        # End of range can be a bare day number in the same month: "Nov24 - 30".
+        self.assertTrue(_is_week_header(["Nov24 - 30", "Mon. 11/24"]))
+
     def test_is_week_header_rejects_group_row(self):
         self.assertFalse(_is_week_header(["Senior Elite", "5:00-6:30am RAV"]))
 
@@ -244,6 +255,33 @@ class TestParseSchedule(unittest.TestCase):
         groups = {e["group"] for e in events}
         self.assertIn("Senior 1", groups)
         self.assertIn("AG 3", groups)
+
+    def test_spaced_dash_header_does_not_cascade(self):
+        # Regression: a week header with spaces around the dash ("Aug31 - Sept 6")
+        # must be recognized as a header, not mis-parsed as a group row. When it
+        # was missed, its day-cells became a bogus "Aug31 - Sept 6" group and the
+        # week's real group rows were mapped onto the previous week's dates.
+        week1 = self._week_block(
+            "Aug24-30",
+            ["Mon. 8/24", "Tues. 8/25", "Wed. 8/26", "Thurs. 8/27",
+             "Fri. 8/28", "Sat. 8/29", "Sun. 8/30"],
+            [("Senior Elite", ["No Practice"] * 7)],
+        )
+        week2 = self._week_block(
+            "Aug31 - Sept 6",
+            ["Mon. 8/31", "Tues. 9/1", "Wed. 9/2", "Thurs. 9/3",
+             "Fri. 9/4", "Sat. 9/5", "Sun. 9/6"],
+            [("Senior Elite", ["5:00-6:30am RAV", "", "", "", "", "", ""])],
+        )
+        events = parse_schedule(week1 + week2)
+
+        # No bogus group named after the week range.
+        self.assertNotIn("Aug31 - Sept 6", {e["group"] for e in events})
+        # The real practice resolves to the correct date in its own week.
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["group"], "Senior Elite")
+        self.assertEqual(events[0]["date"], date(2026, 8, 31))
+        self.assertEqual(events[0]["time"], "5:00-6:30am RAV")
 
     def test_multiple_weeks(self):
         # Both March 25 and April 1, 2026 are Wednesdays

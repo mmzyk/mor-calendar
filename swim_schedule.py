@@ -66,10 +66,14 @@ def normalize(text: str) -> str:
 # Columns 1–7 always correspond to Mon–Sun of the current week block.
 # The year for each week is resolved per-cell from the day-of-week label.
 
-# Matches week-range labels in both formats:
-#   old (no spaces):  "Jan29-Feb4", "April1-7"
-#   new (with spaces): "April 6-12", "March 30-April5", "Sept 29-Oct 5"
-_WEEK_RANGE_RE = re.compile(r"^[A-Za-z]+\s*\d+[-–][A-Za-z]*\s*\d+$")
+# Matches week-range labels in several observed formats:
+#   no spaces:            "Jan29-Feb4", "April1-7"
+#   space after month:    "April 6-12", "March 30-April5", "Sept 29-Oct 5"
+#   spaces around dash:   "Aug31 - Sept 6", "Sept 28 - Oct4", "Dec 30 - Jan 5"
+#   month omitted on end: "Nov24 - 30"
+# Whitespace is allowed on either side of the hyphen/en-dash, and the trailing
+# month name is optional (the end day can be a bare number in the same month).
+_WEEK_RANGE_RE = re.compile(r"^[A-Za-z]+\s*\d+\s*[-–]\s*[A-Za-z]*\s*\d+$")
 
 # Extracts the M/D portion from day-header cells like "Mon. 1/29" or "Thurs. 2/1"
 _DAY_CELL_RE = re.compile(r"\b(\d{1,2}/\d{1,2})\b")
